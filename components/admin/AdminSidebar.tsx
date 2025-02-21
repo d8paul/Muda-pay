@@ -12,6 +12,7 @@ import {
   BanknotesIcon,
   ChevronDownIcon,
 } from "@heroicons/react/24/outline"
+import BavaPayLogo from "../BavaPayLogo"
 
 const menuItems = [
   { name: "Dashboard", icon: HomeIcon, path: "/admin/dashboard" },
@@ -119,7 +120,7 @@ export default function AdminSidebar() {
       <div className="flex flex-col w-64">
         <div className="flex flex-col h-0 flex-1">
           <div className="flex items-center h-16 flex-shrink-0 px-4 bg-gray-900">
-            <h2 className="text-lg font-medium text-white">BavaPay Admin</h2>
+          <BavaPayLogo className="mx-auto h-12 w-auto" />
           </div>
           <div className="flex-1 flex flex-col overflow-y-auto">
             <nav className="flex-1 px-2 py-4 bg-gray-800 space-y-1">{menuItems.map(renderMenuItem)}</nav>

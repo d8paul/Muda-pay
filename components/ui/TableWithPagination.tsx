@@ -56,7 +56,7 @@ export default function TableWithPagination({ data, columns, itemsPerPage = 10 }
                           // Special styling for amount based on trans_type
                           <span
                             className={`font-medium ${
-                              row.trans_type === "DR" ? "text-red-600" : "text-green-600"
+                              row.trans_type === "PUSH" ? "text-red-600" : "text-green-600"
                             }`}
                           >
                             {row[col.key]}
