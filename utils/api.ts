@@ -2,14 +2,14 @@ import axios from "axios"
 import toast from "react-hot-toast"
 
 const api = axios.create({
-  baseURL: "https://ag-api.bavana.site",
+  baseURL: "https://ag-live.bavana.site",
   // baseURL: "http://localhost:8000",
 })
 
 // Add a request interceptor
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("adminToken")
+    const token = localStorage.getItem("token")
     if (token) {
       config.headers["Authorization"] = `Bearer ${token}`
     }
