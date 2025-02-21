@@ -1,29 +1,51 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import toast from "react-hot-toast"
 import ProgressBar from "@/components/ProgressBar"
-
-// Hardcoded pending deposits data
-const pendingDeposits = [
-  { id: 1, walletId: "W001", amount: 500000, narration: "Monthly deposit", depositReference: "DEP001" },
-  { id: 2, walletId: "W002", amount: 750000, narration: "Quarterly deposit", depositReference: "DEP002" },
-  { id: 3, walletId: "W003", amount: 1000000, narration: "Annual deposit", depositReference: "DEP003" },
-]
+import { get, post } from "@/utils/api"
 
 export default function PendingDepositsPage() {
   const [isLoading, setIsLoading] = useState(false)
+  const [pendingDeposits, setPendingDeposits] = useState([])
 
-  const handleApprove = (id: number) => {
-    // Simulate API call for approval
+  useEffect(() => {
+    const fetchPendingDeposits = async () => {
+      setIsLoading(true)
+      try {
+        const response = await get("/admin/pending-deposits")
+        if (response.status === 200) {
+          setPendingDeposits(response.data)
+        }
+      } catch (error) {
+        console.error("Error fetching pending deposits:", error)
+        toast.error("Failed to fetch pending deposits")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchPendingDeposits()
+  }, [])
+
+  const handleApprove = async (trans_id) => {
     setIsLoading(true)
-    setTimeout(() => {
-      console.log("Approving deposit:", id)
-      toast.success("Deposit approved successfully")
+    try {
+      const response = await post("payment/approveDepositTransaction", { trans_id })
+      if (response.status === 200) {
+        toast.success("Deposit approved successfully")
+        setPendingDeposits(prev => prev.filter(deposit => deposit.trans_id !== trans_id))
+      } else {
+        toast.error("Failed to approve deposit")
+      }
+    } catch (error) {
+      console.error("Error approving deposit:", error)
+      toast.error("An error occurred while approving deposit")
+    } finally {
       setIsLoading(false)
-    }, 1000)
+    }
   }
 
   return (
@@ -48,13 +70,13 @@ export default function PendingDepositsPage() {
                 </TableHeader>
                 <TableBody>
                   {pendingDeposits.map((deposit) => (
-                    <TableRow key={deposit.id}>
-                      <TableCell>{deposit.walletId}</TableCell>
-                      <TableCell>{deposit.amount.toLocaleString()}</TableCell>
-                      <TableCell>{deposit.narration}</TableCell>
-                      <TableCell>{deposit.depositReference}</TableCell>
+                    <TableRow key={deposit.trans_id}>
+                      <TableCell>{deposit.client_id}</TableCell>
+                      <TableCell>{parseFloat(deposit.amount).toLocaleString()}</TableCell>
+                      <TableCell>{deposit.memo}</TableCell>
+                      <TableCell>{deposit.trans_id}</TableCell>
                       <TableCell>
-                        <Button onClick={() => handleApprove(deposit.id)}>Approve</Button>
+                        <Button onClick={() => handleApprove(deposit.trans_id)}>Approve</Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -67,4 +89,3 @@ export default function PendingDepositsPage() {
     </>
   )
 }
-

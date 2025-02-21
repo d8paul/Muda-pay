@@ -6,14 +6,7 @@ import { BanknotesIcon, UsersIcon, ArrowUpIcon, ArrowDownIcon } from "@heroicons
 import { formatCurrency } from "@/utils/currency"
 import ProgressBar from "@/components/ProgressBar"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts"
-
-// Hardcoded data for statistics
-const statsData = [
-  { name: "Total Revenue", value: 5000000, icon: BanknotesIcon, change: "+12%", trend: "up" },
-  { name: "Active Users", value: 1250, icon: UsersIcon, change: "+5%", trend: "up" },
-  { name: "New Signups", value: 30, icon: UsersIcon, change: "-2%", trend: "down" },
-  { name: "Transaction Volume", value: 10000000, icon: BanknotesIcon, change: "+8%", trend: "up" },
-]
+import { get } from "@/utils/api"
 
 // Hardcoded data for bar chart
 const barChartData = [
@@ -37,14 +30,30 @@ const lineChartData = [
 
 export default function AdminDashboardPage() {
   const [isLoading, setIsLoading] = useState(true)
+  const [statsData, setStatsData] = useState([])
 
   useEffect(() => {
-    // Simulate API call
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-    }, 1000)
+    const fetchStats = async () => {
+      try {
+        const response = await get("admin/get-stats")
+        const { data } = response
 
-    return () => clearTimeout(timer)
+        const mappedStats = [
+          { name: "Total Collections", value: data.collections, icon: BanknotesIcon },
+          { name: "Total Payouts", value: data.payouts, icon: BanknotesIcon },
+          { name: "Total Revenue", value: data.revenue, icon: BanknotesIcon },
+          { name: "Total Transactions", value: data.transactions, icon: BanknotesIcon },
+        ]
+
+        setStatsData(mappedStats)
+        setIsLoading(false)
+      } catch (error) {
+        console.error("Error fetching stats:", error)
+        setIsLoading(false)
+      }
+    }
+
+    fetchStats()
   }, [])
 
   return (
@@ -65,18 +74,11 @@ export default function AdminDashboardPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">
-                      {item.name.includes("Revenue") || item.name.includes("Volume")
+                      {item.name.includes("Revenue") || item.name.includes("Collections") || item.name.includes("Payouts")
                         ? formatCurrency(item.value, "UGX")
                         : item.value.toLocaleString()}
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {item.trend === "up" ? (
-                        <ArrowUpIcon className="inline h-4 w-4 text-green-500" />
-                      ) : (
-                        <ArrowDownIcon className="inline h-4 w-4 text-red-500" />
-                      )}
-                      {item.change} from last month
-                    </p>
+                    
                   </CardContent>
                 </Card>
               ))}
@@ -127,4 +129,3 @@ export default function AdminDashboardPage() {
     </>
   )
 }
-

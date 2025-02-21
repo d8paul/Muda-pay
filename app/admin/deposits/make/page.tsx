@@ -1,20 +1,12 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import toast from "react-hot-toast"
 import ProgressBar from "@/components/ProgressBar"
-
-// Hardcoded wallet data
-const wallets = [
-  { id: "W001", clientName: "John Doe" },
-  { id: "W002", clientName: "Jane Smith" },
-  { id: "W003", clientName: "Bob Johnson" },
-]
+import { get, post } from "@/utils/api"
 
 export default function MakeDepositPage() {
   const [isLoading, setIsLoading] = useState(false)
@@ -25,6 +17,36 @@ export default function MakeDepositPage() {
     depositReference: "",
   })
   const [searchTerm, setSearchTerm] = useState("")
+  const [clients, setClients] = useState([])
+  const [filteredClients, setFilteredClients] = useState([])
+  const [showDropdown, setShowDropdown] = useState(false)
+
+  useEffect(() => {
+    const fetchClients = async () => {
+      if (searchTerm.trim() === "") {
+        setFilteredClients([])
+        setShowDropdown(false)
+        return
+      }
+
+      setIsLoading(true)
+      try {
+        const response = await get(`/admin/clients/${searchTerm}`)
+        if (response.status === 200) {
+          setClients([response.data])
+          setFilteredClients([response.data])
+          setShowDropdown(true)
+        }
+      } catch (error) {
+        console.error("Error fetching clients:", error)
+        setShowDropdown(false)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchClients()
+  }, [searchTerm])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -37,25 +59,39 @@ export default function MakeDepositPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    // Simulate API call
-    setTimeout(() => {
-      console.log("Making deposit:", formData)
-      toast.success("Deposit request submitted successfully")
-      setFormData({
-        walletId: "",
-        amount: "",
-        narration: "",
-        depositReference: "",
-      })
-      setIsLoading(false)
-    }, 1000)
-  }
 
-  const filteredWallets = wallets.filter(
-    (wallet) =>
-      wallet.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      wallet.clientName.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+    try {
+      const requestBody = {
+        clientId: formData.walletId,
+        amount: parseFloat(formData.amount),
+        currency: "UGX",
+        product_id: "10000",
+        account_number: formData.depositReference,
+        reference_id: formData.depositReference,
+        public_key: "GBPREREREREOOPOPOOREOPREOREOPROPROEROP",
+      }
+
+      const response = await post("/admin/depositRequest", requestBody)
+
+      if (response.status === 200) {
+        toast.success("Deposit request submitted successfully")
+        setFormData({
+          walletId: "",
+          amount: "",
+          narration: "",
+          depositReference: "",
+        })
+        setSearchTerm("")
+        setShowDropdown(false)
+      } else {
+        console.error("Failed to submit deposit request")
+      }
+    } catch (error) {
+      console.error("Error submitting deposit request:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   return (
     <>
@@ -69,7 +105,7 @@ export default function MakeDepositPage() {
             <form onSubmit={handleSubmit} className="space-y-6 bg-white shadow px-4 py-5 sm:rounded-lg sm:p-6">
               <div>
                 <Label htmlFor="walletId">Wallet ID</Label>
-                <div className="mt-1">
+                <div className="mt-1 relative">
                   <Input
                     type="text"
                     name="walletId"
@@ -79,18 +115,19 @@ export default function MakeDepositPage() {
                     placeholder="Search for wallet ID or client name"
                     className="w-full"
                   />
-                  {searchTerm && (
-                    <ul className="mt-2 border border-gray-300 rounded-md max-h-40 overflow-auto">
-                      {filteredWallets.map((wallet) => (
+                  {showDropdown && filteredClients.length > 0 && (
+                    <ul className="mt-2 border border-gray-300 rounded-md max-h-40 overflow-auto absolute z-10 bg-white w-full">
+                      {filteredClients.map((client) => (
                         <li
-                          key={wallet.id}
+                          key={client.client_id}
                           className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
                           onClick={() => {
-                            setFormData((prevData) => ({ ...prevData, walletId: wallet.id }))
-                            setSearchTerm(`${wallet.id} - ${wallet.clientName}`)
+                            setFormData((prevData) => ({ ...prevData, walletId: client.client_id }))
+                            setSearchTerm(`${client.client_id} - ${client.business_name}`)
+                            setShowDropdown(false)
                           }}
                         >
-                          {wallet.id} - {wallet.clientName}
+                          {client.client_id} - {client.business_name}
                         </li>
                       ))}
                     </ul>
@@ -152,4 +189,3 @@ export default function MakeDepositPage() {
     </>
   )
 }
-

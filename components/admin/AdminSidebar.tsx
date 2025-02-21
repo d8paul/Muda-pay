@@ -26,6 +26,15 @@ const menuItems = [
     ],
   },
   {
+    name: "Business",
+    icon: UsersIcon,
+    submenu: [
+      { name: "Business List", path: "/admin/business/businesslist" },
+      { name: "Add Business", path: "/admin/business/addbusiness" },
+      
+    ],
+  },
+  {
     name: "Users",
     icon: UsersIcon,
     submenu: [
