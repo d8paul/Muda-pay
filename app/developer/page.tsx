@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { InfoIcon } from "lucide-react"
+import Header from "../Header"
 
 export default function DeveloperDocs() {
   const [isLiveEnvironment, setIsLiveEnvironment] = useState(false)
@@ -13,7 +14,10 @@ export default function DeveloperDocs() {
 
   return (
     <div className="py-6">
+          <Header />
+
       <div className="max-w-5xl mx-auto px-4 sm:px-6 md:px-8">
+
         <h1 className="text-2xl font-semibold text-gray-900 mb-6">API Documentation</h1>
         <p className="mt-2 text-gray-600">Complete documentation for integrating with our payment processing API</p>
         <Alert className="mt-4">
