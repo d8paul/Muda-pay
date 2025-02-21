@@ -9,7 +9,8 @@ import {get,post} from '@/utils/api'
 const columns = [
   { key: "created_at", label: "Date" },
   { key: "amount", label: "Amount" },
-  { key: "asset_code", label: "Currency" },
+  { key: "trans_type", label: "Trans Type" },
+  { key: "currency", label: "Currency" },
   { key: "product_id", label: "Product ID" },
   { key: "receiver_account", label: "Receiver Account" },
   { key: "reference_id", label: "Reference ID" },
