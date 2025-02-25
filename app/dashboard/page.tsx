@@ -19,9 +19,7 @@ const columns = [
   { key: "asset_code", label: "Currency" },
   { key: "product_id", label: "Product ID" },
   { key: "receiver_account", label: "Receiver Account" },
-  { key: "reference_id", label: "Reference ID" },
-  { key: "status", label: "Status" },
-  { key: "trans_id", label: "Transaction ID" },
+  { key: "status", label: "Status" }
 ];
 
 export default function DashboardPage() {
