@@ -13,7 +13,7 @@ const BavaLogo: React.FC<BavaLogoProps> = ({ className = "h-12 w-auto" }) => {
       fill="none"
     >
       {/* Background Rectangle */}
-      <rect width="200" height="50" rx="8" fill="#1F2937" />
+      {/* <rect width="200" height="50" rx="8" fill="#1F2937" /> */}
 
       {/* BAVA Text */}
       <text
@@ -21,7 +21,7 @@ const BavaLogo: React.FC<BavaLogoProps> = ({ className = "h-12 w-auto" }) => {
         y="58%"
         dominantBaseline="middle"
         textAnchor="middle"
-        fill="white"
+        fill="#1f2937"
         fontSize="30"
         fontWeight="bold"
         fontFamily="Arial, Helvetica, sans-serif"

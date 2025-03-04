@@ -38,6 +38,7 @@ export default function HomePage() {
               variant="outline"
               className="border-slate-900/20 hover:bg-slate-900/10 hover:border-slate-900 text-slate-900"
               onClick={() => window.open("https://bava-doc.netlify.app/3", "_blank")}
+              //onClick={() => window.open("https://bava-doc.netlify.app/3", "_blank")}
             >
               Documentation
             </Button>

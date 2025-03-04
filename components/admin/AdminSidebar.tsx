@@ -62,10 +62,10 @@ export default function AdminSidebar() {
         <div key={item.name}>
           <button
             onClick={() => toggleDropdown(item.name)}
-            className="w-full text-left text-gray-300 hover:bg-gray-700 hover:text-white group flex items-center px-2 py-2 text-sm font-medium rounded-md"
+            className="w-full text-left text-gray-700 hover:bg-[#26a0ff] hover:text-white group flex items-center px-2 py-2 text-sm font-medium rounded-md"
           >
             <item.icon
-              className="text-gray-400 group-hover:text-gray-300 mr-3 flex-shrink-0 h-6 w-6"
+              className="text-gray-400 group-hover:text-white mr-3 flex-shrink-0 h-6 w-6"
               aria-hidden="true"
             />
             {item.name}
@@ -83,8 +83,8 @@ export default function AdminSidebar() {
                   href={subItem.path}
                   className={`${
                     isActive(subItem.path)
-                      ? "bg-gray-900 text-white"
-                      : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                      ? "bg-[#26a0ff] text-white"
+                      : "text-gray-700 hover:bg-[#26a0ff] hover:text-white"
                   } group flex items-center px-2 py-2 text-sm font-medium rounded-md`}
                 >
                   {subItem.name}
@@ -101,12 +101,12 @@ export default function AdminSidebar() {
         key={item.name}
         href={item.path}
         className={`${
-          isActive(item.path) ? "bg-gray-900 text-white" : "text-gray-300 hover:bg-gray-700 hover:text-white"
+          isActive(item.path) ? "bg-[#26a0ff] text-white" : "text-gray-700 hover:bg-[#26a0ff] hover:text-white"
         } group flex items-center px-2 py-2 text-sm font-medium rounded-md`}
       >
         <item.icon
           className={`${
-            isActive(item.path) ? "text-gray-300" : "text-gray-400 group-hover:text-gray-300"
+            isActive(item.path) ? "text-white" : "text-gray-400 group-hover:text-white"
           } mr-3 flex-shrink-0 h-6 w-6`}
           aria-hidden="true"
         />
@@ -119,15 +119,14 @@ export default function AdminSidebar() {
     <div className="hidden md:flex md:flex-shrink-0">
       <div className="flex flex-col w-64">
         <div className="flex flex-col h-0 flex-1">
-          <div className="flex items-center h-16 flex-shrink-0 px-4 bg-gray-900">
-          <BavaPayLogo className="mx-auto h-12 w-auto" />
+          <div className="flex items-center h-16 flex-shrink-0 px-4">
+            <BavaPayLogo className="mx-auto h-12 w-auto" />
           </div>
-          <div className="flex-1 flex flex-col overflow-y-auto">
-            <nav className="flex-1 px-2 py-4 bg-gray-800 space-y-1">{menuItems.map(renderMenuItem)}</nav>
+          <div className="flex-1 flex flex-col overflow-y-auto bg-white">
+            <nav className="flex-1 px-2 py-4 space-y-1">{menuItems.map(renderMenuItem)}</nav>
           </div>
         </div>
       </div>
     </div>
   )
 }
-

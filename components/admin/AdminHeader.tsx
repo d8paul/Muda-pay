@@ -9,8 +9,12 @@ export default function AdminHeader() {
   const router = useRouter()
 
   const handleLogout = () => {
-    // Implement logout logic here
-    router.push("/admin/login")
+    // Clear session data
+    localStorage.clear()
+    sessionStorage.clear()
+
+    // Redirect to admin login page
+    router.push("/admin")
   }
 
   return (
@@ -56,4 +60,3 @@ export default function AdminHeader() {
     </header>
   )
 }
-
