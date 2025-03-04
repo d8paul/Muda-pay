@@ -30,13 +30,13 @@ export default function HomePage() {
             Integrate once, access multiple currencies and payment methods. Build better financial experiences.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="bg-slate-900 hover:bg-slate-800 text-white gap-2">
+            <Button size="lg" className="bg-[#26a0ff] hover:bg-[#26a0ff] text-white gap-2">
               Get Started <ArrowRight className="size-4" />
             </Button>
             <Button
               size="lg"
               variant="outline"
-              className="border-slate-900/20 hover:bg-slate-900/10 hover:border-slate-900 text-slate-900"
+              className="border-slate-900/20 hover:bg-#26a0ff hover:border-slate-900 text-slate-900"
               onClick={() => window.open("https://bava-doc.netlify.app/3", "_blank")}
               //onClick={() => window.open("https://bava-doc.netlify.app/3", "_blank")}
             >
