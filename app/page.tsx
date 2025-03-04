@@ -85,7 +85,7 @@ export default function HomePage() {
           <div className="absolute inset-0 bg-gradient-to-r from-slate-900/5 to-purple-900/5 rounded-lg"></div>
           <div className="relative text-center p-16 rounded-lg border border-slate-900/10 bg-white/50">
             <h2 className="text-2xl font-bold mb-8">Ready to get started?</h2>
-            <Button size="lg" className="bg-slate-900 hover:bg-slate-800 text-white">
+            <Button size="lg" className="bg-[#26a0ff] hover:bg-slate-800 text-white">
               Create Account
             </Button>
           </div>
