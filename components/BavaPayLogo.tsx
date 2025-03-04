@@ -18,23 +18,24 @@ const BavaLogo: React.FC<BavaLogoProps> = ({ className = "h-12 w-auto" }) => {
       {/* BAVA Text */}
       <text
         x="50%"
-        y="50%"
+        y="58%"
         dominantBaseline="middle"
         textAnchor="middle"
         fill="white"
-        fontSize="28"
+        fontSize="30"
         fontWeight="bold"
         fontFamily="Arial, Helvetica, sans-serif"
       >
-        BAVA
+        MUDA
       </text>
 
       {/* Accent Element - Stylized Slash */}
-      <path
-        d="M30 10 L40 40"
-        stroke="#FF4136"
-        strokeWidth="4"
-        strokeLinecap="round"
+      <image
+        href="/logo.png"
+        x="10"
+        y="4"
+        height="40"
+        width="40"
       />
     </svg>
   );

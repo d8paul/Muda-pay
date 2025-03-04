@@ -19,6 +19,7 @@ export default function AdminLayout({
   useEffect(() => {
     const checkAuth = () => {
       const token = localStorage.getItem("adminToken")
+      console.log("The Admin Tokens: ",token)
       if (!token && pathname !== "/admin") {
         router.push("/admin")
       } else if (token) {

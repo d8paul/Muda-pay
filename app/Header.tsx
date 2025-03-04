@@ -11,11 +11,11 @@ const Header = () => {
         <div className="flex h-16 items-center justify-between">
           {/* Logo Section */}
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded bg-slate-900">
-              <BavaPayLogo className="mx-auto h-12 w-auto" />
+            <div className="flex h-18 w-auto items-center justify-center rounded">
+              <BavaPayLogo className="mx-auto h-12 w-auto"  />
 
-              </div>
-            <span className="text-lg font-bold text-slate-800">BavaPay</span>
+              </div>{/* 
+            <span className="text-lg font-bold text-slate-800">MUDA-Pay</span> */}
           </div>
 
           {/* Navigation Links */}

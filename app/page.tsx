@@ -99,9 +99,9 @@ export default function HomePage() {
               <div className="flex h-6 w-6 items-center justify-center rounded bg-slate-900">
                 <Wallet className="size-4 text-white" />
               </div>
-              <span className="text-sm font-medium">BavaPay</span>
+              <span className="text-sm font-medium">MUDA-Pay</span>
             </div>
-            <p className="text-sm text-slate-600">© 2024 BavaPay. All rights reserved.</p>
+            <p className="text-sm text-slate-600">© 2024 MUDA-Pay. All rights reserved.</p>
           </div>
         </div>
       </footer>
