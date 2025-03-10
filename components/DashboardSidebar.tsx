@@ -11,7 +11,7 @@ import {
   CodeBracketIcon,
   ClockIcon,
 } from "@heroicons/react/24/outline";
-import BavaPayLogo from '../components/BavaPayLogo';
+import BavaPayLogo from './BavaPayLogo';
 
 const menuItems = [
   { name: "Dashboard", icon: HomeIcon, path: "/dashboard" },
@@ -30,11 +30,11 @@ export default function DashboardSidebar() {
     <div className="hidden md:flex md:flex-shrink-0">
       <div className="flex flex-col w-64">
         <div className="flex flex-col h-0 flex-1">
-          <div className="flex items-center h-16 flex-shrink-0 px-4 bg-gray-900">
+          <div className="flex items-center h-16 flex-shrink-0 px-4 bg-white">
             <BavaPayLogo className="mx-auto h-12 w-auto" />
           </div>
-          <div className="flex-1 flex flex-col overflow-y-auto">
-            <nav className="flex-1 px-2 py-4 bg-gray-800 space-y-1">
+          <div className="flex-1 flex flex-col overflow-y-auto bg-white">
+            <nav className="flex-1 px-2 py-4 space-y-1">
               {menuItems.map((item) => {
                 const isActive = pathname === item.path;
 
@@ -46,12 +46,12 @@ export default function DashboardSidebar() {
                     target="_blank"
                     rel="noopener noreferrer"
                     className={`${
-                      isActive ? "bg-gray-900 text-white" : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                      isActive ? "bg-[#26a0ff] text-white" : "text-gray-700 hover:bg-[#26a0ff] hover:text-white"
                     } group flex items-center px-2 py-2 text-sm font-medium rounded-md`}
                   >
                     <item.icon
                       className={`${
-                        isActive ? "text-gray-300" : "text-gray-400 group-hover:text-gray-300"
+                        isActive ? "text-white" : "text-gray-400 group-hover:text-white"
                       } mr-3 flex-shrink-0 h-6 w-6`}
                       aria-hidden="true"
                     />
@@ -63,12 +63,12 @@ export default function DashboardSidebar() {
                     key={item.name}
                     href={item.path}
                     className={`${
-                      isActive ? "bg-gray-900 text-white" : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                      isActive ? "bg-[#26a0ff] text-white" : "text-gray-700 hover:bg-[#26a0ff] hover:text-white"
                     } group flex items-center px-2 py-2 text-sm font-medium rounded-md`}
                   >
                     <item.icon
                       className={`${
-                        isActive ? "text-gray-300" : "text-gray-400 group-hover:text-gray-300"
+                        isActive ? "text-white" : "text-gray-400 group-hover:text-white"
                       } mr-3 flex-shrink-0 h-6 w-6`}
                       aria-hidden="true"
                     />

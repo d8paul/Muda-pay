@@ -20,7 +20,7 @@ const Header = () => {
 
           {/* Navigation Links */}
           <div className="flex items-center gap-6">
-            <Link href="/developer" className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900">
+            <Link href="https://bava-doc.netlify.app/3/"  target="_blank"  className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900">
               API Docs
             </Link>
             <Link href="/login">
