@@ -38,7 +38,7 @@ export default function HomePage() {
               size="lg"
               variant="outline"
               className="border-slate-900/20 hover:bg-#26a0ff hover:border-slate-900 text-slate-900"
-              onClick={() => window.open("http://docs-payments.muda.tech/", "_blank")}
+              onClick={() => window.open("https://payments-docs.muda.tech/", "_blank")}
             >
               Documentation
             </Button>
