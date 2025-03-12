@@ -12,13 +12,15 @@ import {
   ClockIcon,
 } from "@heroicons/react/24/outline";
 import BavaPayLogo from './BavaPayLogo';
+import { Money, MoneyOff } from "@mui/icons-material";
 
 const menuItems = [
   { name: "Dashboard", icon: HomeIcon, path: "/dashboard" },
   { name: "Wallet", icon: WalletIcon, path: "/dashboard/wallet" },
-  { name: "Transactions", icon: ClipboardDocumentListIcon, path: "/dashboard/transactions" },
-  { name: "Bulk Transfers", icon: ArrowsRightLeftIcon, path: "/dashboard/bulk-transfers" },
-  { name: "Standing Orders", icon: ClockIcon, path: "/dashboard/standing-orders" },
+  { name: "Collections", icon: Money, path: "/dashboard/collections" },
+  { name: "Payouts", icon: MoneyOff, path: "/dashboard/payouts" },
+/*   { name: "Bulk Transfers", icon: ArrowsRightLeftIcon, path: "/dashboard/bulk-transfers" },
+  { name: "Standing Orders", icon: ClockIcon, path: "/dashboard/standing-orders" }, */
   { name: "Settings", icon: Cog6ToothIcon, path: "/dashboard/settings" },
   { name: "Developer Docs", icon: CodeBracketIcon, path: "https://payments-docs.muda.tech/", external: true },
 ];

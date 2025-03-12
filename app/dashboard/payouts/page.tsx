@@ -32,7 +32,7 @@ export default function TransactionsPage() {
   useEffect(() => {
     const fetchTransactions = async () => {
       try {
-        const response = await get("payment/statement")
+        const response = await get("payment/statement?type=push")
         console.log("Transaction Responses: ",response.data)
         setTransactions(response.data)
       } catch (error) {
@@ -46,7 +46,7 @@ export default function TransactionsPage() {
   return (
     <div className="py-6">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-        <h1 className="text-2xl font-semibold text-gray-900">Transaction Logs</h1>
+        <h1 className="text-2xl font-semibold text-gray-900">Payouts</h1>
       </div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
         <div className="py-4">

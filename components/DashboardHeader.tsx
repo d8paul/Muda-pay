@@ -56,7 +56,7 @@ export default function DashboardHeader() {
               />
               <span className={`text-sm ${isLiveEnvironment ? "font-medium" : "text-gray-500"}`}>Live</span>
             </div>
-            <div className="relative inline-block text-left mr-4">
+            {/* <div className="relative inline-block text-left mr-4">
               <div>
                 <button
                   type="button"
@@ -106,7 +106,7 @@ export default function DashboardHeader() {
                   </div>
                 </div>
               )}
-            </div>
+            </div> */}
             <div className="ml-3 relative">
               <div>
                 <button
