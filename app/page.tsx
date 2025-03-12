@@ -1,15 +1,16 @@
 "use client";
 
-import { ArrowRight, Wallet, ArrowUpRight } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
-import Header from "./Header"
+import { ArrowRight, Wallet, ArrowUpRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import Header from "./Header";
 
 export default function HomePage() {
+  const currentYear = new Date().getFullYear();
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-100 via-slate-200 to-slate-100 text-slate-900">
-     
-    <Header />
+      <Header />
 
       {/* Main Content */}
       <main className="mx-auto max-w-5xl px-8 sm:px-16 relative pt-32 pb-20">
@@ -37,8 +38,7 @@ export default function HomePage() {
               size="lg"
               variant="outline"
               className="border-slate-900/20 hover:bg-#26a0ff hover:border-slate-900 text-slate-900"
-              onClick={() => window.open("https://bava-doc.netlify.app/3", "_blank")}
-              //onClick={() => window.open("https://bava-doc.netlify.app/3", "_blank")}
+              onClick={() => window.open("http://docs-payments.muda.tech/", "_blank")}
             >
               Documentation
             </Button>
@@ -102,11 +102,10 @@ export default function HomePage() {
               </div>
               <span className="text-sm font-medium">MUDA-Pay</span>
             </div>
-            <p className="text-sm text-slate-600">© 2024 MUDA-Pay. All rights reserved.</p>
+            <p className="text-sm text-slate-600">© {currentYear} MUDA-Pay. All rights reserved.</p>
           </div>
         </div>
       </footer>
     </div>
-  )
+  );
 }
-
