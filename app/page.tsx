@@ -20,12 +20,12 @@ export default function HomePage() {
 
         {/* Hero Section */}
         <div className="relative mx-auto max-w-3xl text-center mb-32">
-          <h1 className="text-4xl md:text-6xl font-bold leading-tight tracking-tight mb-6">
-            Financial Solutions for
+          <h1 className="text-4xl md:text-6xl font-bold leading-tight tracking-tight mb-6"> 
             <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+              New Age
               {" "}
-              East Africa
             </span>
+            Financial Solutions
           </h1>
           <p className="text-lg text-slate-600 mb-8 mx-auto max-w-2xl">
             Integrate once, access multiple currencies and payment methods. Build better financial experiences.
