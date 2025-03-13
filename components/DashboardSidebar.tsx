@@ -22,7 +22,7 @@ const menuItems = [
 /*   { name: "Bulk Transfers", icon: ArrowsRightLeftIcon, path: "/dashboard/bulk-transfers" },
   { name: "Standing Orders", icon: ClockIcon, path: "/dashboard/standing-orders" }, */
   { name: "Settings", icon: Cog6ToothIcon, path: "/dashboard/settings" },
-  { name: "Developer Docs", icon: CodeBracketIcon, path: "https://payments-docs.muda.tech/", external: true },
+  { name: "Developer Docs", icon: CodeBracketIcon, path: "https://payments-doc.muda.tech/", external: true },
 ];
 
 export default function DashboardSidebar() {
