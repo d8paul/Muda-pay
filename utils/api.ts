@@ -2,7 +2,7 @@ import axios from "axios"
 import toast from "react-hot-toast"
 
 const api = axios.create({
-  baseURL: "https://ag-live.bavana.site",
+  baseURL: "https://api.muda.tech/web/",
   // baseURL: "http://localhost:8000",
 })
 
