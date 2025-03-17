@@ -31,7 +31,8 @@ export default function HomePage() {
             Integrate once, access multiple currencies and payment methods. Build better financial experiences.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="bg-[#26a0ff] hover:bg-[#26a0ff] text-white gap-2">
+            <Button size="lg" className="bg-[#26a0ff] hover:bg-[#26a0ff] text-white gap-2"
+            onClick={() => window.open("https://api.muda.tech/web", "_blank")}>
               Get Started <ArrowRight className="size-4" />
             </Button>
             <Button
@@ -81,7 +82,7 @@ export default function HomePage() {
         </div>
 
         {/* CTA */}
-        <div className="relative max-w-4xl mx-auto">
+        {/* <div className="relative max-w-4xl mx-auto">
           <div className="absolute inset-0 bg-gradient-to-r from-slate-900/5 to-purple-900/5 rounded-lg"></div>
           <div className="relative text-center p-16 rounded-lg border border-slate-900/10 bg-white/50">
             <h2 className="text-2xl font-bold mb-8">Ready to get started?</h2>
@@ -89,7 +90,7 @@ export default function HomePage() {
               Create Account
             </Button>
           </div>
-        </div>
+        </div> */}
       </main>
 
       {/* Footer */}
