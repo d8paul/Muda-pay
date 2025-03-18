@@ -1,61 +1,24 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Switch as MUISwitch, TextField, IconButton } from "@mui/material";
-import DeleteIcon from "@mui/icons-material/Delete"; // Import delete icon
+import { IconButton, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from "@mui/material";
+import DeleteIcon from "@mui/icons-material/Delete";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 import { get, post } from "@/utils/api";
+import ResetPasswordModal from "./components/reset-password-modal";
+import ConfirmDialog from "./components/confirm-dialog";
+import CreateWebhookModal from "./components/create-webhook-modal";
+import { CopyToClipboard } from "react-copy-to-clipboard";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 
-// ConfirmDialog Component
-const ConfirmDialog = ({ isOpen, onClose, onConfirm, message }) => {
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed z-50 inset-0 overflow-y-auto">
-      <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        {/* Background overlay */}
-        <div
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-          aria-hidden="true"
-          onClick={onClose} // Close modal when clicking outside
-        />
-
-        {/* Spacer to center the modal contents */}
-        <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">
-          &#8203;
-        </span>
-
-        {/* Modal Panel */}
-        <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900">Confirm Action</h3>
-          <p className="mt-2 text-sm text-gray-500">{message}</p>
-
-          {/* Action Buttons */}
-          <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3">
-            <button
-              type="button"
-              className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700"
-              onClick={onConfirm}
-            >
-              Confirm
-            </button>
-            <button
-              type="button"
-              className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0"
-              onClick={onClose}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 export default function SettingsPage() {
   const [apiKeys, setApiKeys] = useState([]);
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [newApiKeyName, setNewApiKeyName] = useState("");
+  const [showSecretKey, setShowSecretKey] = useState(false);
+  const [selectedSecretKey, setSelectedSecretKey] = useState("");
+  const [copySuccess, setCopySuccess] = useState(false);
 
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
@@ -112,7 +75,7 @@ export default function SettingsPage() {
   const handleDeleteApiKey = async (apiKeyId: string) => {
     try {
       await post("clients/delete-api-key", { id: apiKeyId });
-      fetchApiKeys(); // Refresh the list
+      fetchApiKeys(); // Refresh list
     } catch (error) {
       console.error("Error deleting API key:", error);
     }
@@ -130,6 +93,17 @@ export default function SettingsPage() {
     } catch (error) {
       console.error("Error adding webhook:", error);
     }
+  };
+
+  const handleViewSecretKey = (secretKey) => {
+    setSelectedSecretKey(secretKey);
+    setShowSecretKey(true);
+  };
+
+  const handleCloseSecretKey = () => {
+    setShowSecretKey(false);
+    setCopySuccess(false)
+    setSelectedSecretKey("");
   };
 
   // Delete webhook
@@ -223,7 +197,14 @@ export default function SettingsPage() {
                         {apiKey.key_name}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {apiKey.api_key}
+                        API-KEY: {apiKey.api_key}
+                        <br />
+                        Secret-KEY: <IconButton
+                          onClick={() => handleViewSecretKey(apiKey.secret_key)}
+                          aria-label="view"
+                        >
+                          <VisibilityIcon className="text-blue-500 hover:text-blue-700" /> <div className="text-sm text-blue-700">View Secret Key</div>
+                        </IconButton>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <IconButton
@@ -264,7 +245,7 @@ export default function SettingsPage() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Callback URL
+                      URL
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
@@ -292,23 +273,6 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
-
-        {/* ----------------------------------------------- */}
-        {/* 3) Reset Password Section */}
-        {/* ----------------------------------------------- */}
-        <div className="py-4 bg-white shadow sm:rounded-lg mt-6">
-          <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900">Reset Password</h3>
-            <p className="mt-2 text-sm text-gray-500">Reset your account password.</p>
-            <button
-              type="button"
-              onClick={() => setShowResetPasswordModal(true)}
-              className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
-            >
-              Reset Password
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* Confirm Dialog */}
@@ -319,176 +283,55 @@ export default function SettingsPage() {
         message="Are you sure you want to delete this item? This action cannot be undone."
       />
 
-      {/* API Key Modal */}
-      {showApiKeyModal && (
-        <div className="fixed z-50 inset-0 overflow-y-auto">
-          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            {/* Background overlay */}
-            <div
-              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-              aria-hidden="true"
-              onClick={() => setShowApiKeyModal(false)} // Close modal when clicking outside
-            />
-
-            {/* Spacer to center the modal contents */}
-            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">
-              &#8203;
-            </span>
-
-            {/* Modal Panel */}
-            <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">Generate New API Key</h3>
-
-              {/* MUI TextField for the API Key Name */}
-              <TextField
-                fullWidth
-                size="small"
-                label="API Key Name"
-                variant="outlined"
-                value={newApiKeyName}
-                onChange={(e) => setNewApiKeyName(e.target.value)}
-                className="mt-2"
-              />
-
-              {/* Action Buttons */}
-              <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3">
-                <button
-                  type="button"
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700"
-                  onClick={handleGenerateApiKey}
-                >
-                  Generate
-                </button>
-                <button
-                  type="button"
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0"
-                  onClick={() => setShowApiKeyModal(false)}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Webhook Modal */}
       {showWebhookModal && (
-        <div className="fixed z-50 inset-0 overflow-y-auto">
-          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            {/* Background overlay */}
-            <div
-              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-              aria-hidden="true"
-              onClick={() => setShowWebhookModal(false)} // Close modal when clicking outside
-            />
-
-            {/* Spacer to center the modal contents */}
-            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">
-              &#8203;
-            </span>
-
-            {/* Modal Panel */}
-            <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">Add New Webhook</h3>
-
-              {/* MUI TextField for the Webhook URL */}
-              <TextField
-                fullWidth
-                size="small"
-                label="Callback URL"
-                variant="outlined"
-                value={newWebhookUrl}
-                onChange={(e) => setNewWebhookUrl(e.target.value)}
-                className="mt-2"
-              />
-
-              {/* Action Buttons */}
-              <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3">
-                <button
-                  type="button"
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700"
-                  onClick={handleAddWebhook}
-                >
-                  Add
-                </button>
-                <button
-                  type="button"
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0"
-                  onClick={() => setShowWebhookModal(false)}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <CreateWebhookModal
+          isOpen={showWebhookModal}
+          onClose={() => setShowWebhookModal(false)}
+          onAdd={handleAddWebhook}
+          newWebhookUrl={newWebhookUrl}
+          setNewWebhookUrl={setNewWebhookUrl}
+        />
       )}
 
       {/* Reset Password Modal */}
       {showResetPasswordModal && (
-        <div className="fixed z-50 inset-0 overflow-y-auto">
-          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            {/* Background overlay */}
-            <div
-              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-              aria-hidden="true"
-              onClick={() => setShowResetPasswordModal(false)} // Close modal when clicking outside
-            />
-
-            {/* Spacer to center the modal contents */}
-            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">
-              &#8203;
-            </span>
-
-            {/* Modal Panel */}
-            <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">Reset Password</h3>
-
-              {/* MUI TextFields for Email and New Password */}
-              <TextField
-                fullWidth
-                size="small"
-                label="Email"
-                variant="outlined"
-                type="email"
-                value={resetEmail}
-                onChange={(e) => setResetEmail(e.target.value)}
-                className="mt-2"
-              />
-
-              <TextField
-                fullWidth
-                size="small"
-                label="New Password"
-                variant="outlined"
-                type="password"
-                value={resetPassword}
-                onChange={(e) => setResetPassword(e.target.value)}
-                className="mt-2"
-              />
-
-              {/* Action Buttons */}
-              <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3">
-                <button
-                  type="button"
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700"
-                  onClick={handleResetPassword}
-                >
-                  Reset
-                </button>
-                <button
-                  type="button"
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0"
-                  onClick={() => setShowResetPasswordModal(false)}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ResetPasswordModal
+          showResetPasswordModal={showResetPasswordModal}
+          setShowResetPasswordModal={setShowResetPasswordModal}
+          resetEmail={resetEmail}
+          setResetEmail={setResetEmail}
+          resetPassword={resetPassword}
+          setResetPassword={setResetPassword}
+          handleResetPassword={handleResetPassword}
+        />
       )}
+
+      {/* Secret Key Dialog */}
+      <Dialog open={showSecretKey} onClose={handleCloseSecretKey}>
+        <DialogTitle className="text-center">
+          Secret Key
+          <CopyToClipboard text={selectedSecretKey} onCopy={() => setCopySuccess(true)}>
+            <IconButton aria-label="copy" className="ml-2">
+              <ContentCopyIcon className="text-blue-500 hover:text-blue-700" />
+            </IconButton>
+          </CopyToClipboard>
+        </DialogTitle>
+        <DialogContent className="ml-2 mr-2">
+          <DialogContentText>
+            {selectedSecretKey}
+          </DialogContentText>
+          {copySuccess && (
+            <div className="mt-2 text-green-500 text-center text-sm">Copied to clipboard!</div>
+          )}
+          <div className="mt-7 text-red-500 text-center text-sm">The secret key will not be displayed again.</div>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseSecretKey} color="primary">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 }

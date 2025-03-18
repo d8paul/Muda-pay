@@ -55,13 +55,15 @@ export default function HomePage() {
             </h3>
             <p className="text-slate-600">Send money to bank accounts and mobile wallets instantly.</p>
           </div>
-          <div className="group p-8 rounded-lg border border-slate-900/10 bg-white/50 hover:border-slate-900/20 hover:bg-white/80 transition-all">
-            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-              Collection Payments
-              <ArrowUpRight className="size-4 opacity-50 group-hover:opacity-100 transition-opacity text-slate-900" />
-            </h3>
-            <p className="text-slate-600">Collect payments from customers across multiple methods.</p>
-          </div>
+          <a href="https://payments-doc.muda.tech/7" target="_blank" rel="noopener noreferrer">
+            <div className="group p-8 rounded-lg border border-slate-900/10 bg-white/50 hover:border-slate-900/20 hover:bg-white/80 transition-all">
+              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                Collection Payments
+                <ArrowUpRight className="size-4 opacity-50 group-hover:opacity-100 transition-opacity text-slate-900" />
+              </h3>
+              <p className="text-slate-600">Collect payments from customers across multiple methods.</p>
+            </div>
+          </a>
         </div>
 
         {/* Currencies */}
