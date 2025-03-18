@@ -8,9 +8,9 @@ import { get, post } from "@/utils/api";
 import ResetPasswordModal from "./components/reset-password-modal";
 import ConfirmDialog from "./components/confirm-dialog";
 import CreateWebhookModal from "./components/create-webhook-modal";
+import CreateApiKeyModal from "./components/create-api-key-modal";
 import { CopyToClipboard } from "react-copy-to-clipboard";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-
 
 export default function SettingsPage() {
   const [apiKeys, setApiKeys] = useState([]);
@@ -57,15 +57,17 @@ export default function SettingsPage() {
     }
   };
 
-  // Generate new API key
-  const handleGenerateApiKey = async () => {
+   // Generate new API key
+   const handleGenerateApiKey = async () => {
     if (!newApiKeyName.trim()) return;
-
     try {
-      await post("clients/generate-api-key", { name: newApiKeyName });
+      const response = await post("clients/generate-api-key", { name: newApiKeyName });
+      console.log("Response Data", response);
       setNewApiKeyName("");
       setShowApiKeyModal(false);
       fetchApiKeys();
+      setSelectedSecretKey(response.data.secret_key);
+      setShowSecretKey(true);
     } catch (error) {
       console.error("Error generating API key:", error);
     }
@@ -95,14 +97,14 @@ export default function SettingsPage() {
     }
   };
 
-  const handleViewSecretKey = (secretKey) => {
+  const handleViewSecretKey = (secretKey: any) => {
     setSelectedSecretKey(secretKey);
     setShowSecretKey(true);
   };
 
   const handleCloseSecretKey = () => {
     setShowSecretKey(false);
-    setCopySuccess(false)
+    setCopySuccess(false);
     setSelectedSecretKey("");
   };
 
@@ -134,7 +136,7 @@ export default function SettingsPage() {
   };
 
   // Handle delete confirmation
-  const handleDeleteConfirmation = (type, id) => {
+  const handleDeleteConfirmation = (type: any, id: any) => {
     setItemToDelete({ type, id });
     setConfirmDialogOpen(true);
   };
@@ -198,13 +200,6 @@ export default function SettingsPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         API-KEY: {apiKey.api_key}
-                        <br />
-                        Secret-KEY: <IconButton
-                          onClick={() => handleViewSecretKey(apiKey.secret_key)}
-                          aria-label="view"
-                        >
-                          <VisibilityIcon className="text-blue-500 hover:text-blue-700" /> <div className="text-sm text-blue-700">View Secret Key</div>
-                        </IconButton>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <IconButton
@@ -291,6 +286,17 @@ export default function SettingsPage() {
           onAdd={handleAddWebhook}
           newWebhookUrl={newWebhookUrl}
           setNewWebhookUrl={setNewWebhookUrl}
+        />
+      )}
+
+      {/* API Key Modal */}
+      {showApiKeyModal && (
+        <CreateApiKeyModal
+          isOpen={showApiKeyModal}
+          onClose={() => setShowApiKeyModal(false)}
+          onGenerate={handleGenerateApiKey}
+          newApiKeyName={newApiKeyName}
+          setNewApiKeyName={setNewApiKeyName}
         />
       )}
 

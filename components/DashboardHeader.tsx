@@ -5,6 +5,7 @@ import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { ChevronDownIcon } from "@heroicons/react/20/solid"
 import { Switch } from "@/components/ui/switch"
+import { get, post } from "@/utils/api";
 
 const currencies = [
   { code: "UGX", name: "Ugandan Shilling", flag: "https://flagcdn.com/w40/ug.png" },
@@ -18,6 +19,8 @@ export default function DashboardHeader() {
   const [selectedCurrency, setSelectedCurrency] = useState(currencies[0])
   const router = useRouter()
   const [isLiveEnvironment, setIsLiveEnvironment] = useState(false)
+  const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [showFeedback, setShowFeedback] = useState(false);
 
   useEffect(() => {
     const storedCurrency = localStorage.getItem("selectedCurrency")
@@ -25,6 +28,23 @@ export default function DashboardHeader() {
       setSelectedCurrency(JSON.parse(storedCurrency))
     }
   }, [])
+
+  const handleToggleEnvironment = async () => {
+    const currentStatus = isLiveEnvironment ? "live" : "test";
+    const newStatus = !isLiveEnvironment ? "live" : "test";
+  
+    try {
+      await post("clients/updateAccountStatus", { current_status: currentStatus, new_status: newStatus });
+      setIsLiveEnvironment(!isLiveEnvironment);
+      setFeedbackMessage("Environment updated successfully.");
+    } catch (error) {
+      console.error("Error updating environment status:", error);
+      setFeedbackMessage("Failed to update environment.");
+    } finally {
+      setShowFeedback(true);
+      setTimeout(() => setShowFeedback(false), 3000); // Hide feedback after 3 seconds
+    }
+  };
 
   const handleCurrencyChange = (currency) => {
     setSelectedCurrency(currency)
@@ -51,11 +71,16 @@ export default function DashboardHeader() {
               <span className={`text-sm ${isLiveEnvironment ? "text-gray-500" : "font-medium"}`}>Test</span>
               <Switch
                 checked={isLiveEnvironment}
-                onCheckedChange={setIsLiveEnvironment}
+                onCheckedChange={handleToggleEnvironment}
                 aria-label="Toggle environment"
               />
               <span className={`text-sm ${isLiveEnvironment ? "font-medium" : "text-gray-500"}`}>Live</span>
             </div>
+            {showFeedback && (
+              <div className="ml-4 text-sm text-gray-700">
+                {feedbackMessage}
+              </div>
+            )}
             {/* <div className="relative inline-block text-left mr-4">
               <div>
                 <button
