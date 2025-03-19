@@ -32,7 +32,7 @@ export default function TransactionsPage() {
   useEffect(() => {
     const fetchTransactions = async () => {
       try {
-        const response = await get("payment/statement?type=pull")
+        const response = await get("payment/statement/collections")
         console.log("Transaction Responses: ",response.data)
         setTransactions(response.data)
       } catch (error) {

@@ -268,6 +268,25 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+
+                {/* ----------------------------------------------- */}
+        {/* 3) Reset Password Section */}
+        {/* ----------------------------------------------- */}
+        <div className="py-4 bg-white shadow sm:rounded-lg mt-6">
+          <div className="px-4 py-5 sm:p-6">
+            <h3 className="text-lg leading-6 font-medium text-gray-900">Reset Password</h3>
+            <p className="mt-2 text-sm text-gray-500">Reset your account password here.</p>
+            <div className="mt-5">
+              <button
+                type="button"
+                onClick={() => setShowResetPasswordModal(true)}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
+              >
+                Reset Password
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Confirm Dialog */}
