@@ -7,8 +7,10 @@ import CompanyInfoTab from "./components/company-info-tab";
 import ApiKeysTab from "./components/api-keys-tab";
 import AccountTab from "./components/account-tab";
 import DepositFloatTab from "./components/deposit-float-tab";
+import { Suspense } from "react";
 
-export default function SettingsPage() {
+// Client component that uses useSearchParams 
+const SettingsPageContent = () => {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const [activeTab, setActiveTab] = useState(tabParam && ["company", "api", "account", "deposit"].includes(tabParam) ? tabParam : "company");
@@ -112,5 +114,20 @@ export default function SettingsPage() {
         </div>
       </div>
     </div>
+  );
+};
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={
+      <div className="py-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 mb-6">
+          <h1 className="text-2xl font-semibold text-gray-900">Settings</h1>
+          <p className="mt-2 text-sm text-gray-500">Loading...</p>
+        </div>
+      </div>
+    }>
+      <SettingsPageContent />
+    </Suspense>
   );
 }

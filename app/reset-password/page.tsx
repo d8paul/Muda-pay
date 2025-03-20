@@ -1,5 +1,6 @@
 import ResetPasswordForm from "@/components/ResetPasswordForm"
 import type { Metadata } from "next"
+import { Suspense } from "react"
 
 export const metadata: Metadata = {
   title: "Reset Password | MUDA-Pay Financial Dashboard",
@@ -9,7 +10,15 @@ export const metadata: Metadata = {
 export default function ResetPasswordPage() {
   return (
     <main>
-      <ResetPasswordForm />
+      <Suspense fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gray-100">
+          <div className="text-center">
+            <h2 className="text-lg font-medium text-gray-900">Loading...</h2>
+          </div>
+        </div>
+      }>
+        <ResetPasswordForm />
+      </Suspense>
     </main>
   )
 } 
