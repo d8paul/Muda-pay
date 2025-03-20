@@ -5,7 +5,14 @@ import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { ChevronDownIcon } from "@heroicons/react/20/solid"
 import { Switch } from "@/components/ui/switch"
-import { get, post } from "@/utils/api";
+import { get, post } from "@/utils/api"
+import { User } from "lucide-react"
+
+interface Currency {
+  code: string;
+  name: string;
+  flag: string;
+}
 
 const currencies = [
   { code: "UGX", name: "Ugandan Shilling", flag: "https://flagcdn.com/w40/ug.png" },
@@ -19,42 +26,91 @@ export default function DashboardHeader() {
   const [selectedCurrency, setSelectedCurrency] = useState(currencies[0])
   const router = useRouter()
   const [isLiveEnvironment, setIsLiveEnvironment] = useState(false)
-  const [feedbackMessage, setFeedbackMessage] = useState("");
-  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState("")
+  const [showFeedback, setShowFeedback] = useState(false)
+  const [userEmail, setUserEmail] = useState("")
+  const [businessName, setBusinessName] = useState("")
 
   useEffect(() => {
+    // Load currency preference
     const storedCurrency = localStorage.getItem("selectedCurrency")
     if (storedCurrency) {
       setSelectedCurrency(JSON.parse(storedCurrency))
     }
+    
+    // Load environment setting
+    const environment = localStorage.getItem("environment")
+    if (environment) {
+      setIsLiveEnvironment(environment === "live")
+    }
+    
+    // Load user info
+    const email = localStorage.getItem("user_email")
+    if (email) {
+      setUserEmail(email)
+    }
+    
+    const business = localStorage.getItem("business_name")
+    if (business) {
+      setBusinessName(business)
+    }
   }, [])
 
   const handleToggleEnvironment = async () => {
-    const currentStatus = isLiveEnvironment ? "live" : "test";
-    const newStatus = !isLiveEnvironment ? "live" : "test";
+    const currentStatus = isLiveEnvironment ? "live" : "test"
+    const newStatus = !isLiveEnvironment ? "live" : "test"
   
     try {
-      await post("clients/updateAccountStatus", { current_status: currentStatus, new_status: newStatus });
-      setIsLiveEnvironment(!isLiveEnvironment);
-      setFeedbackMessage("Environment updated successfully.");
+      await post("clients/updateAccountStatus", { current_status: currentStatus, new_status: newStatus })
+      setIsLiveEnvironment(!isLiveEnvironment)
+      
+      // Update stored environment
+      localStorage.setItem("environment", newStatus)
+      
+      setFeedbackMessage("Environment updated successfully.")
     } catch (error) {
-      console.error("Error updating environment status:", error);
-      setFeedbackMessage("Failed to update environment.");
+      console.error("Error updating environment status:", error)
+      setFeedbackMessage("Failed to update environment.")
     } finally {
-      setShowFeedback(true);
-      setTimeout(() => setShowFeedback(false), 3000); // Hide feedback after 3 seconds
+      setShowFeedback(true)
+      setTimeout(() => setShowFeedback(false), 3000) // Hide feedback after 3 seconds
     }
-  };
+  }
 
-  const handleCurrencyChange = (currency) => {
+  const handleCurrencyChange = (currency: Currency) => {
     setSelectedCurrency(currency)
     localStorage.setItem("selectedCurrency", JSON.stringify(currency))
     setIsCurrencyMenuOpen(false)
   }
 
   const handleLogout = () => {
-    // Implement logout logic here
+    // Clear all stored data
+    localStorage.removeItem("token")
+    localStorage.removeItem("environment")
+    localStorage.removeItem("business_name")
+    localStorage.removeItem("user_email")
+    
     router.push("/login")
+  }
+
+  // Function to get initials from business name or email
+  const getInitials = () => {
+    if (businessName) {
+      return businessName
+        .split(" ")
+        .map(word => word[0])
+        .join("")
+        .toUpperCase()
+        .substring(0, 2)
+    } else if (userEmail) {
+      return userEmail.substring(0, 2).toUpperCase()
+    }
+    return "U"
+  }
+
+  // Gets the environment badge color
+  const getEnvironmentBadgeColor = () => {
+    return isLiveEnvironment ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"
   }
 
   return (
@@ -81,75 +137,44 @@ export default function DashboardHeader() {
                 {feedbackMessage}
               </div>
             )}
-            {/* <div className="relative inline-block text-left mr-4">
-              <div>
-                <button
-                  type="button"
-                  className="inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-indigo-500"
-                  id="currency-menu"
-                  aria-expanded="true"
-                  aria-haspopup="true"
-                  onClick={() => setIsCurrencyMenuOpen(!isCurrencyMenuOpen)}
-                >
-                  <Image
-                    src={selectedCurrency.flag || "/placeholder.svg"}
-                    alt={selectedCurrency.name}
-                    width={20}
-                    height={15}
-                    className="mr-2"
-                  />
-                  {selectedCurrency.code}
-                  <ChevronDownIcon className="-mr-1 ml-2 h-5 w-5" aria-hidden="true" />
-                </button>
-              </div>
-
-              {isCurrencyMenuOpen && (
-                <div
-                  className="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none"
-                  role="menu"
-                  aria-orientation="vertical"
-                  aria-labelledby="currency-menu"
-                >
-                  <div className="py-1" role="none">
-                    {currencies.map((currency) => (
-                      <button
-                        key={currency.code}
-                        onClick={() => handleCurrencyChange(currency)}
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full text-left"
-                        role="menuitem"
-                      >
-                        <Image
-                          src={currency.flag || "/placeholder.svg"}
-                          alt={currency.name}
-                          width={20}
-                          height={15}
-                          className="mr-2"
-                        />
-                        {currency.name} ({currency.code})
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div> */}
             <div className="ml-3 relative">
               <div>
                 <button
-                  className="max-w-xs bg-white flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  className="bg-white flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                   onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
                 >
                   <span className="sr-only">Open user menu</span>
-                  <Image
-                    className="h-8 w-8 rounded-full"
-                    src="/placeholder.svg"
-                    alt="User avatar"
-                    width={32}
-                    height={32}
-                  />
+                  <div className="flex items-center">
+                    <div className="mr-3 text-right hidden sm:block">
+                      <div className={`text-xs font-medium px-2 py-0.5 rounded-full ${getEnvironmentBadgeColor()}`}>
+                        {isLiveEnvironment ? "Live" : "Test"} Mode
+                      </div>
+                    </div>
+                    <div className="h-8 w-8 rounded-full bg-sky-600 flex items-center justify-center text-white">
+                      {getInitials()}
+                    </div>
+                  </div>
                 </button>
               </div>
               {isProfileMenuOpen && (
-                <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none">
+                <div className="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
+                  <div className="px-4 py-3 border-b border-gray-100">
+                    {businessName && (
+                      <p className="text-sm font-medium text-gray-700">{businessName}</p>
+                    )}
+                    {userEmail && (
+                      <p className="text-xs text-gray-500 truncate">{userEmail}</p>
+                    )}
+                    <div className={`mt-1 text-xs font-medium px-2 inline-block py-0.5 rounded-full ${getEnvironmentBadgeColor()}`}>
+                      {isLiveEnvironment ? "Live" : "Test"} Mode
+                    </div>
+                  </div>
+                  <a
+                    href="/dashboard/settings"
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+                  >
+                    Settings
+                  </a>
                   <button
                     className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
                     onClick={handleLogout}

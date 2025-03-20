@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { formatCurrency } from "@/utils/currency";
 import { get, post } from "@/utils/api";
+import { Skeleton } from "@/components/ui/skeleton";
+import { RefreshCw } from "lucide-react";
 
 interface IBalance {
   asset_code: string; // e.g. "cUGX"
@@ -33,11 +35,20 @@ export default function WalletPage() {
 
   useEffect(() => {
     const fetchData = async () => {
+      setIsLoading(true);
+      
       try {
+        // Create a promise that resolves after 1 second
+        const delay = new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Fetch data
         const [balanceResponse, transactionsResponse] = await Promise.all([
           get("clients/balances"),
           get("payment/statement"),
         ]);
+
+        // Wait for both the data and the minimum delay
+        await delay;
 
         // Convert raw balances into an IBalance array
         const processed = balanceResponse.data.map((balance: any) => {
@@ -129,54 +140,92 @@ export default function WalletPage() {
         <h1 className="text-2xl font-semibold text-gray-900">Wallet</h1>
       </div>
 
-      {/* One card per currency */}
-      {Object.entries(groupedBalances).map(([currency, balancesForCurrency]) => (
-        <div key={currency} className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+      {isLoading ? (
+        // Loading state
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
           <div className="py-4">
             <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-              {/* Card Header */}
-              <div className="px-4 py-5 sm:px-6">
-                <h3 className="text-lg leading-6 font-medium text-gray-900">
-                  Wallet Balances for {currency}
-                </h3>
+              <div className="px-4 py-5 sm:px-6 flex items-center justify-between">
+                <Skeleton className="h-7 w-64" />
+                <RefreshCw className="h-5 w-5 text-gray-400 animate-spin" />
               </div>
-
-              {/* Balances List */}
               <div className="border-t border-gray-200">
-                <dl>
-                  {balancesForCurrency.map((balance, index) => (
-                    <div
-                      key={balance.type}
-                      className={
-                        index % 2 === 0
-                          ? "bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6"
-                          : "bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6"
-                      }
-                    >
-                      <dt className="text-sm font-medium text-gray-500">{balance.type}</dt>
-                      <dd className="mt-1 text-sm font-bold text-gray-900 sm:mt-0 sm:col-span-1">
-                        {formatCurrency(balance.amount, balance.currency)}
-                      </dd>
-
-                      {/* Transfer button only on Collections rows */}
-                      {balance.type.startsWith("Collections Balance") && (
-                        <div className="mt-2 sm:mt-0 text-right">
-                          <button
-                            onClick={() => openTransferModal(balance)}
-                            className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                          >
-                            Transfer
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </dl>
+                <div className="px-4 py-5 sm:px-6">
+                  <Skeleton className="h-6 w-full mb-4" />
+                  <Skeleton className="h-6 w-3/4 mb-4" />
+                  <Skeleton className="h-6 w-1/2" />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="py-4">
+            <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+              <div className="px-4 py-5 sm:px-6">
+                <Skeleton className="h-7 w-64" />
+              </div>
+              <div className="border-t border-gray-200">
+                <div className="px-4 py-5 sm:px-6">
+                  <Skeleton className="h-6 w-full mb-4" />
+                  <Skeleton className="h-6 w-3/4 mb-4" />
+                  <Skeleton className="h-6 w-1/2" />
+                </div>
               </div>
             </div>
           </div>
         </div>
-      ))}
+      ) : (
+        // Render actual wallet content when data is loaded
+        <>
+          {/* One card per currency */}
+          {Object.entries(groupedBalances).map(([currency, balancesForCurrency]) => (
+            <div key={currency} className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+              <div className="py-4">
+                <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+                  {/* Card Header */}
+                  <div className="px-4 py-5 sm:px-6">
+                    <h3 className="text-lg leading-6 font-medium text-gray-900">
+                      Wallet Balances for {currency}
+                    </h3>
+                  </div>
+
+                  {/* Balances List */}
+                  <div className="border-t border-gray-200">
+                    <dl>
+                      {balancesForCurrency.map((balance, index) => (
+                        <div
+                          key={balance.type}
+                          className={
+                            index % 2 === 0
+                              ? "bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6"
+                              : "bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6"
+                          }
+                        >
+                          <dt className="text-sm font-medium text-gray-500">{balance.type}</dt>
+                          <dd className="mt-1 text-sm font-bold text-gray-900 sm:mt-0 sm:col-span-1">
+                            {formatCurrency(balance.amount, balance.currency)}
+                          </dd>
+
+                          {/* Transfer button only on Collections rows */}
+                          {balance.type.startsWith("Collections Balance") && (
+                            <div className="mt-2 sm:mt-0 text-right">
+                              <button
+                                onClick={() => openTransferModal(balance)}
+                                className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                              >
+                                Transfer
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </>
+      )}
 
       {/* ----------------------------------------- */}
       {/* Transfer Modal (Step 1: Amount / Narration) */}

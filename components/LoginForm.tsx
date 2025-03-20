@@ -3,6 +3,7 @@
 import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { post } from "@/utils/api"
 import toast from "react-hot-toast"
 import BavaPayLogo from "./BavaPayLogo"
@@ -20,7 +21,22 @@ export default function LoginForm() {
     try {
       const response = await post("/clients/login", { email, password })
       console.log("Login successful:", response)
+      
+      // Store token
       localStorage.setItem("token", response.data.token)
+      
+      // Store additional user information
+      if (response.data.environment) {
+        localStorage.setItem("environment", response.data.environment)
+      }
+      
+      if (response.data.business_name) {
+        localStorage.setItem("business_name", response.data.business_name)
+      }
+      
+      // Store user email
+      localStorage.setItem("user_email", email)
+      
       toast.success("Login successful")
       router.push("/dashboard")
     } catch (error) {
@@ -42,7 +58,7 @@ export default function LoginForm() {
 
         <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
           <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-            <form className="space-y-6" onSubmit={handleSubmit}>
+            <form className="space-y-6" onSubmit={handleSubmit} method="POST" action="#">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                   Email address
@@ -91,11 +107,10 @@ export default function LoginForm() {
                     Remember me
                   </label>
                 </div>
-
                 <div className="text-sm">
-                  <a href="#" className="font-medium text-indigo-600 hover:text-indigo-500">
+                  <Link href="/forgot-password" className="font-medium text-[#26a0ff] hover:text-blue-500">
                     Forgot your password?
-                  </a>
+                  </Link>
                 </div>
               </div>
 
@@ -103,7 +118,7 @@ export default function LoginForm() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#26a0ff] hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#26a0ff] hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? "Signing in..." : "Sign in"}
                 </button>

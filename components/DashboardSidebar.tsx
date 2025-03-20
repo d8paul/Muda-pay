@@ -10,6 +10,7 @@ import {
   Cog6ToothIcon,
   CodeBracketIcon,
   ClockIcon,
+  BanknotesIcon,
 } from "@heroicons/react/24/outline";
 import BavaPayLogo from './BavaPayLogo';
 import { Money, MoneyOff } from "@mui/icons-material";

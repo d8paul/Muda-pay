@@ -51,7 +51,7 @@ const CreateWebhookModal: React.FC<CreateWebhookModalProps> = ({
           <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3">
             <button
               type="button"
-              className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700"
+              className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-sky-500 text-base font-medium text-white hover:bg-sky-600"
               onClick={onAdd}
             >
               Add
