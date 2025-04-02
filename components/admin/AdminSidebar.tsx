@@ -11,6 +11,7 @@ import {
   Cog6ToothIcon,
   BanknotesIcon,
   ChevronDownIcon,
+  ChartBarIcon,
 } from "@heroicons/react/24/outline"
 import BavaPayLogo from "../BavaPayLogo"
 
@@ -42,6 +43,11 @@ const menuItems = [
       { name: "Users List", path: "/admin/users/list" },
       { name: "Add User", path: "/admin/users/add" },
     ],
+  },
+  {
+    name: "Reports",
+    icon: ChartBarIcon,
+    path: "/admin/reports",
   },
   { name: "Settings", icon: Cog6ToothIcon, path: "/admin/settings" },
 ]
