@@ -8,12 +8,14 @@ import ProgressBar from "@/components/ProgressBar"
 import { get, post } from "@/utils/api"
 import { format } from "date-fns"
 import FeeTwoFactorModal from "@/app/admin/fees/components/FeeTwoFactorModal"
+import { FaCheck, FaTimes } from "react-icons/fa" // Import icons
 
 export default function PendingDepositsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [pendingDeposits, setPendingDeposits] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTransId, setSelectedTransId] = useState(null);
+  const [actionType, setActionType] = useState(null); // Track action type (approve/reject)
 
   useEffect(() => {
     const fetchPendingDeposits = async () => {
@@ -34,27 +36,50 @@ export default function PendingDepositsPage() {
     fetchPendingDeposits();
   }, []);
 
-  const handleApprove = async () => {
+  const handleAction = async () => {
     setIsLoading(true);
     try {
-      const response = await post("payment/approveDepositTransaction", { trans_id: selectedTransId });
+      const endpoint =
+        actionType === "approve"
+          ? "payment/approveDepositTransaction"
+          : "payment/rejectDepositTransaction";
+
+      const response = await post(endpoint, { trans_id: selectedTransId });
       if (response.status === 200) {
-        toast.success("Deposit approved successfully");
-        setPendingDeposits((prev) => prev.filter((deposit) => deposit.trans_id !== selectedTransId));
+        toast.success(
+          actionType === "approve"
+            ? "Deposit approved successfully"
+            : "Deposit rejected successfully"
+        );
+        setPendingDeposits((prev) =>
+          prev.filter((deposit) => deposit.trans_id !== selectedTransId)
+        );
       } else {
-        toast.error("Failed to approve deposit");
+        toast.error(
+          actionType === "approve"
+            ? "Failed to approve deposit"
+            : "Failed to reject deposit"
+        );
       }
     } catch (error) {
-      console.error("Error approving deposit:", error);
-      toast.error("An error occurred while approving deposit");
+      console.error(
+        `Error ${actionType === "approve" ? "approving" : "rejecting"} deposit:`,
+        error
+      );
+      toast.error(
+        `An error occurred while ${
+          actionType === "approve" ? "approving" : "rejecting"
+        } deposit`
+      );
     } finally {
       setIsLoading(false);
       setIsModalOpen(false);
     }
   };
 
-  const openModal = (trans_id) => {
+  const openModal = (trans_id, type) => {
     setSelectedTransId(trans_id);
+    setActionType(type);
     setIsModalOpen(true);
   };
 
@@ -64,7 +89,7 @@ export default function PendingDepositsPage() {
       <FeeTwoFactorModal
         open={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onVerify={handleApprove}
+        onVerify={handleAction}
       />
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
@@ -92,8 +117,20 @@ export default function PendingDepositsPage() {
                       <TableCell>{parseFloat(deposit.amount).toLocaleString()}</TableCell>
                       <TableCell>{deposit.memo}</TableCell>
                       <TableCell>{deposit.trans_id}</TableCell>
-                      <TableCell>
-                        <Button onClick={() => openModal(deposit.trans_id)}>Approve</Button>
+                      <TableCell className="flex gap-2">
+                        <Button
+                          onClick={() => openModal(deposit.trans_id, "approve")}
+                          className="flex items-center gap-1"
+                        >
+                          <FaCheck /> Approve
+                        </Button>
+                        <Button
+                          onClick={() => openModal(deposit.trans_id, "reject")}
+                          className="flex items-center gap-1"
+                          variant="destructive"
+                        >
+                          <FaTimes /> Reject
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}

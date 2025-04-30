@@ -90,7 +90,7 @@ export default function AddUserPage() {
                 </Select>
               </div>
 
-              <div>
+{/*               <div>
                 <Label htmlFor="password">Password</Label>
                 <Input
                   type="password"
@@ -112,7 +112,7 @@ export default function AddUserPage() {
                   onChange={handleChange}
                   required
                 />
-              </div>
+              </div> */}
 
               <div>
                 <Button type="submit" disabled={isLoading}>
