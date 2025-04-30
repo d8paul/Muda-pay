@@ -3,15 +3,18 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { ChangePasswordDialog } from "@/components/ChangePasswordDialog"
+import { ChangePasswordDialogAdmin } from "@/components/ChangePasswordDialogAdmin"
 
 interface ResetPasswordButtonProps {
   className?: string
   variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link"
+  account_type?: string
 }
 
 export function ResetPasswordButton({ 
   className, 
-  variant = "outline" 
+  variant = "outline",
+  account_type, 
 }: ResetPasswordButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
 
@@ -24,10 +27,17 @@ export function ResetPasswordButton({
       >
         Reset Password
       </Button>
-      <ChangePasswordDialog 
-        open={isOpen} 
-        onOpenChange={setIsOpen} 
-      />
+      {account_type === "admin" ? (
+        <ChangePasswordDialogAdmin 
+          open={isOpen} 
+          onOpenChange={setIsOpen} 
+        />
+      ) : (
+        <ChangePasswordDialog 
+          open={isOpen} 
+          onOpenChange={setIsOpen} 
+        />
+      )}
     </>
   )
-} 
+}

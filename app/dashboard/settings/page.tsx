@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CompanyInfoTab from "./components/company-info-tab";
 import ApiKeysTab from "./components/api-keys-tab";
+import IpsWebhookTab from "./components/ips-webhook-tab";
 import AccountTab from "./components/account-tab";
 import DepositFloatTab from "./components/deposit-float-tab";
 import { Suspense } from "react";
@@ -52,7 +53,13 @@ const SettingsPageContent = () => {
                   value="api" 
                   className="px-6 py-4 data-[state=active]:bg-transparent data-[state=active]:text-[#26a0ff] data-[state=active]:border-b-2 data-[state=active]:border-[#26a0ff] rounded-none h-full text-sm font-medium"
                 >
-                  API & Webhooks
+                  API Keys
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="ips" 
+                  className="px-6 py-4 data-[state=active]:bg-transparent data-[state=active]:text-[#26a0ff] data-[state=active]:border-b-2 data-[state=active]:border-[#26a0ff] rounded-none h-full text-sm font-medium"
+                >
+                  IPs & Webhooks
                 </TabsTrigger>
                 <TabsTrigger 
                   value="account" 
@@ -82,12 +89,22 @@ const SettingsPageContent = () => {
 
               <TabsContent value="api" className="mt-0">
                 <div className="border-b pb-5 mb-6">
-                  <h3 className="text-lg font-medium text-gray-900">API Keys & Webhooks</h3>
+                  <h3 className="text-lg font-medium text-gray-900">API Keys</h3>
                   <p className="mt-2 text-sm text-gray-500">
-                    Manage your API keys and webhook endpoints for integrations.
+                    Manage your Testing and Live API keys.
                   </p>
                 </div>
                 <ApiKeysTab />
+              </TabsContent>
+
+              <TabsContent value="ips" className="mt-0">
+                <div className="border-b pb-5 mb-6">
+                  <h3 className="text-lg font-medium text-gray-900">IPs & Webhooks</h3>
+                  <p className="mt-2 text-sm text-gray-500">
+                    Manage your IP Address whitelist and webhook endpoints for integrations.
+                  </p>
+                </div>
+                <IpsWebhookTab />
               </TabsContent>
 
               <TabsContent value="account" className="mt-0">

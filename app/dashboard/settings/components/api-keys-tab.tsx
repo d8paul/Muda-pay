@@ -4,149 +4,87 @@ import { useState, useEffect } from "react"
 import { IconButton } from "@mui/material"
 import DeleteIcon from "@mui/icons-material/Delete"
 import { get, post } from "@/utils/api"
-import CreateWebhookModal from "./create-webhook-modal"
 import CreateApiKeyModal from "./create-api-key-modal"
-import ConfirmDialog from "./confirm-dialog"
 import { CopyToClipboard } from "react-copy-to-clipboard"
 import ContentCopyIcon from "@mui/icons-material/ContentCopy"
 import { Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Button } from "@mui/material"
 import { Card } from "@/components/ui/card"
 import { Button as UIButton } from "@/components/ui/button"
 
+interface ApiKey {
+  id: number;
+  key_name: string | null;
+  client_id: number;
+  api_key: string;
+  secret_key: string;
+  created_at: string;
+}
+
 export default function ApiKeysTab() {
-  const [apiKeys, setApiKeys] = useState([])
-  const [showApiKeyModal, setShowApiKeyModal] = useState(false)
-  const [newApiKeyName, setNewApiKeyName] = useState("")
-  const [showSecretKey, setShowSecretKey] = useState(false)
-  const [selectedSecretKey, setSelectedSecretKey] = useState("")
-  const [copySuccess, setCopySuccess] = useState(false)
-
-  const [webhooks, setWebhooks] = useState([])
-  const [showWebhookModal, setShowWebhookModal] = useState(false)
-  const [newWebhookUrl, setNewWebhookUrl] = useState("")
-
-  // State for ConfirmDialog
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
-  const [itemToDelete, setItemToDelete] = useState<{ type: string | null, id: string | null }>({ type: null, id: null })
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [newApiKeyName, setNewApiKeyName] = useState("");
+  const [showSecretKey, setShowSecretKey] = useState(false);
+  const [selectedSecretKey, setSelectedSecretKey] = useState("");
+  const [copySuccess, setCopySuccess] = useState(false);
 
   useEffect(() => {
-    fetchApiKeys()
-    fetchWebhooks()
-  }, [])
+    fetchApiKeys();
+  }, []);
 
-  // Fetch API keys
   const fetchApiKeys = async () => {
     try {
-      const response = await get("clients/getapikeys")
-      setApiKeys(response)
+      const response = await get("clients/getapikeys");
+      setApiKeys(response);
     } catch (error) {
-      console.error("Error fetching API keys:", error)
+      console.error("Error fetching API keys:", error);
     }
-  }
+  };
 
-  // Fetch webhooks
-  const fetchWebhooks = async () => {
-    try {
-      const response = await get("clients/webhooks")
-      setWebhooks(response.data)
-    } catch (error) {
-      console.error("Error fetching webhooks:", error)
-    }
-  }
-
-  // Generate new API key
   const handleGenerateApiKey = async () => {
-    if (!newApiKeyName.trim()) return
+    if (!newApiKeyName.trim()) return;
     try {
-      const response = await post("clients/generate-api-key", { name: newApiKeyName })
-      console.log("Response Data", response)
-      setNewApiKeyName("")
-      setShowApiKeyModal(false)
-      fetchApiKeys()
-      setSelectedSecretKey(response.data.secret_key)
-      setShowSecretKey(true)
+      const response = await post("clients/generate-api-key", { name: newApiKeyName });
+      setNewApiKeyName("");
+      setShowApiKeyModal(false);
+      fetchApiKeys();
+      setSelectedSecretKey(response.data.secret_key);
+      setShowSecretKey(true);
     } catch (error) {
-      console.error("Error generating API key:", error)
+      console.error("Error generating API key:", error);
     }
-  }
+  };
 
-  // Delete API key
-  const handleDeleteApiKey = async (apiKeyId: string) => {
+  const handleDeleteApiKey = async (apiKeyId: any) => {
     try {
-      await post("clients/delete-api-key", { id: apiKeyId })
-      fetchApiKeys() // Refresh list
+      await post("clients/delete-api-key", { id: apiKeyId });
+      fetchApiKeys();
     } catch (error) {
-      console.error("Error deleting API key:", error)
+      console.error("Error deleting API key:", error);
     }
-  }
-
-  // Add new webhook
-  const handleAddWebhook = async () => {
-    if (!newWebhookUrl.trim()) return
-
-    try {
-      await post("clients/addWebhook", { callback_url: newWebhookUrl })
-      setNewWebhookUrl("")
-      setShowWebhookModal(false)
-      fetchWebhooks()
-    } catch (error) {
-      console.error("Error adding webhook:", error)
-    }
-  }
+  };
 
   const handleCloseSecretKey = () => {
-    setShowSecretKey(false)
-    setCopySuccess(false)
-    setSelectedSecretKey("")
-  }
+    setShowSecretKey(false);
+    setCopySuccess(false);
+    setSelectedSecretKey("");
+  };
 
-  // Delete webhook
-  const handleDeleteWebhook = async (webhookId: string) => {
-    try {
-      await post("clients/delete-webhook", { id: webhookId })
-      fetchWebhooks() // Refresh the list
-    } catch (error) {
-      console.error("Error deleting webhook:", error)
-    }
-  }
-
-  // Handle delete confirmation
-  const handleDeleteConfirmation = (type: string, id: string) => {
-    setItemToDelete({ type, id })
-    setConfirmDialogOpen(true)
-  }
-
-  // Handle confirm action
-  const handleConfirm = () => {
-    if (itemToDelete.type === "apiKey" && itemToDelete.id) {
-      handleDeleteApiKey(itemToDelete.id)
-    } else if (itemToDelete.type === "webhook" && itemToDelete.id) {
-      handleDeleteWebhook(itemToDelete.id)
-    }
-    setConfirmDialogOpen(false)
-  }
+  const testKeys = apiKeys.filter((key) => key?.api_key?.startsWith("test_"));
+  const liveKeys = apiKeys.filter((key) => !key.api_key.startsWith("test_"));
 
   return (
     <div className="space-y-8">
-      {/* API Keys Section */}
+      {/* Test API Keys Section */}
       <Card className="overflow-hidden">
         <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b border-gray-200">
-          <h3 className="text-base font-semibold leading-6 text-gray-900">API Keys</h3>
-          <p className="mt-1 max-w-2xl text-sm text-gray-500">Generate and manage API keys for your application integrations.</p>
+          <h3 className="text-base font-semibold leading-6 text-gray-900">Test API Keys</h3>
+          <p className="mt-1 max-w-2xl text-sm text-gray-500">Manage your test API keys for development purposes.</p>
         </div>
         <div className="p-4 sm:p-6">
-          <div className="mb-6">
-            <UIButton
-              onClick={() => setShowApiKeyModal(true)}
-              className="bg-sky-500 hover:bg-sky-600"
-            >
-              Generate New API Key
-            </UIButton>
-          </div>
-
-          {apiKeys.length === 0 ? (
+          {testKeys.length === 0 ? (
             <div className="text-center py-6 bg-gray-50 rounded-md border border-gray-200">
-              <p className="text-gray-500">No API keys found. Generate your first API key to get started.</p>
+              <p className="text-gray-500">No test API keys found.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -165,7 +103,7 @@ export default function ApiKeysTab() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {apiKeys.map((apiKey: any) => (
+                  {testKeys.map((apiKey) => (
                     <tr key={apiKey.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         {apiKey.key_name}
@@ -182,7 +120,7 @@ export default function ApiKeysTab() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <IconButton
-                          onClick={() => handleDeleteConfirmation("apiKey", apiKey.id)}
+                          onClick={() => handleDeleteApiKey(apiKey.id)}
                           aria-label="delete"
                           size="small"
                         >
@@ -198,27 +136,25 @@ export default function ApiKeysTab() {
         </div>
       </Card>
 
-      {/* Webhooks Section */}
+      {/* Live API Keys Section */}
       <Card className="overflow-hidden">
         <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b border-gray-200">
-          <h3 className="text-base font-semibold leading-6 text-gray-900">Webhooks</h3>
-          <p className="mt-1 max-w-2xl text-sm text-gray-500">
-            Configure webhooks to receive real-time notifications for events in your account.
-          </p>
+          <h3 className="text-base font-semibold leading-6 text-gray-900">Live API Keys</h3>
+          <p className="mt-1 max-w-2xl text-sm text-gray-500">Generate and manage live API keys for your application integrations.</p>
         </div>
         <div className="p-4 sm:p-6">
           <div className="mb-6">
             <UIButton
-              onClick={() => setShowWebhookModal(true)}
+              onClick={() => setShowApiKeyModal(true)}
               className="bg-sky-500 hover:bg-sky-600"
             >
-              Add New Webhook
+              Generate New API Key
             </UIButton>
           </div>
 
-          {webhooks.length === 0 ? (
+          {liveKeys.length === 0 ? (
             <div className="text-center py-6 bg-gray-50 rounded-md border border-gray-200">
-              <p className="text-gray-500">No webhooks configured. Add a webhook to receive notifications.</p>
+              <p className="text-gray-500">No live API keys found. Generate your first API key to get started.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -226,7 +162,10 @@ export default function ApiKeysTab() {
                 <thead>
                   <tr className="bg-gray-50">
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      URL
+                      Name
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      API Key
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
@@ -234,14 +173,24 @@ export default function ApiKeysTab() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {webhooks.map((webhook: any) => (
-                    <tr key={webhook.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 font-mono">
-                        {webhook.callback_url}
+                  {liveKeys.map((apiKey) => (
+                    <tr key={apiKey.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {apiKey.key_name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
+                        <div className="flex items-center">
+                          <span className="mr-2">API-KEY: {apiKey.api_key}</span>
+                          <CopyToClipboard text={apiKey.api_key} onCopy={() => {}}>
+                            <IconButton size="small">
+                              <ContentCopyIcon fontSize="small" className="text-sky-500" />
+                            </IconButton>
+                          </CopyToClipboard>
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <IconButton
-                          onClick={() => handleDeleteConfirmation("webhook", webhook.id)}
+                          onClick={() => handleDeleteApiKey(apiKey.id)}
                           aria-label="delete"
                           size="small"
                         >
@@ -256,25 +205,6 @@ export default function ApiKeysTab() {
           )}
         </div>
       </Card>
-
-      {/* Confirm Dialog */}
-      <ConfirmDialog
-        isOpen={confirmDialogOpen}
-        onClose={() => setConfirmDialogOpen(false)}
-        onConfirm={handleConfirm}
-        message="Are you sure you want to delete this item? This action cannot be undone."
-      />
-
-      {/* Webhook Modal */}
-      {showWebhookModal && (
-        <CreateWebhookModal
-          isOpen={showWebhookModal}
-          onClose={() => setShowWebhookModal(false)}
-          onAdd={handleAddWebhook}
-          newWebhookUrl={newWebhookUrl}
-          setNewWebhookUrl={setNewWebhookUrl}
-        />
-      )}
 
       {/* API Key Modal */}
       {showApiKeyModal && (
@@ -313,5 +243,5 @@ export default function ApiKeysTab() {
         </DialogActions>
       </Dialog>
     </div>
-  )
-} 
+  );
+}

@@ -84,8 +84,8 @@ export default function AddUserPage() {
                     <SelectValue placeholder="Select a role" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="user">User</SelectItem>
+                    <SelectItem value="admin">Approver</SelectItem>
+                    <SelectItem value="user">Checker</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

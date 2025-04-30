@@ -20,6 +20,7 @@ export default function AdminLoginPage() {
     setIsLoading(true)
     try {
       const response = await post("/admin/login", { email, password }) 
+      console.log("Login response:", response)
       const token = response.data.token 
       localStorage.setItem("token", token)  
       toast.success("Login successful")

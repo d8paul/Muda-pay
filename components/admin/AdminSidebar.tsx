@@ -12,7 +12,9 @@ import {
   BanknotesIcon,
   ChevronDownIcon,
   ChartBarIcon,
+  DocumentCurrencyDollarIcon,
 } from "@heroicons/react/24/outline"
+
 import BavaPayLogo from "../BavaPayLogo"
 
 const menuItems = [
@@ -47,7 +49,21 @@ const menuItems = [
   {
     name: "Reports",
     icon: ChartBarIcon,
-    path: "/admin/reports",
+    submenu: [
+      { name: "Accounts", path: "/admin/reports/liquidity-rail" },
+      { name: "Collections", path: "/admin/reports/collections-report" },
+      { name: "Payout", path: "/admin/reports/payout-report" },
+      { name: "Off Ram", path: "/admin/reports/off-ram-report" },
+      { name: "Balances", path: "/admin/reports/balances-report" },
+      { name: "Charges", path: "/admin/reports/charges-report" },
+      { name: "Wallets", path: "/admin/reports/wallet-report" },
+      { name: "other", path: "/admin/reports/muda-pay" },
+    ],
+  },
+  {
+    name: "Fees",
+    icon: DocumentCurrencyDollarIcon,
+    path: "/admin/fees",
   },
   { name: "Settings", icon: Cog6ToothIcon, path: "/admin/settings" },
 ]
