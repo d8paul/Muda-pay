@@ -9,9 +9,9 @@ import ProgressBar from "@/components/ProgressBar"
 
 // Hardcoded users data
 const usersData = [
-  { id: 1, name: "John Doe", email: "john@example.com", role: "Admin", isActive: true },
-  { id: 2, name: "Jane Smith", email: "jane@example.com", role: "User", isActive: true },
-  { id: 3, name: "Bob Johnson", email: "bob@example.com", role: "User", isActive: false },
+  { id: 1, name: "John Doe", email: "john@example.com", role: "Approver", isActive: true },
+  { id: 2, name: "Jane Smith", email: "jane@example.com", role: "Checker", isActive: true },
+  { id: 3, name: "Bob Johnson", email: "bob@example.com", role: "Checker", isActive: false },
 ]
 
 export default function UsersListPage() {
