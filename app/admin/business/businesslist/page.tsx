@@ -9,13 +9,23 @@ import ProgressBar from "@/components/ProgressBar"
 import toast from "react-hot-toast"
 import { get, post } from "@/utils/api"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { UserPlusIcon, UsersIcon, CurrencyDollarIcon } from "@heroicons/react/24/outline"
+
+interface Business {
+  client_id: string
+  business_name: string
+  contact_email: string
+  phone_number: string
+  contact_person_name: string
+  registration_number: string
+}
 
 export default function BusinessListPage() {
-  const [businesses, setBusinesses] = useState([])
+  const [businesses, setBusinesses] = useState<Business[]>([])
   const [filter, setFilter] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [selectedBusiness, setSelectedBusiness] = useState(null)
+  const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null)
   const [formData, setFormData] = useState({ first_name: "", last_name: "", email: "", client_id: "" })
   const router = useRouter()
 
@@ -38,7 +48,7 @@ export default function BusinessListPage() {
     }
   }
 
-  const handleCreateLoginClick = (business) => {
+  const handleCreateLoginClick = (business: Business) => {
     setSelectedBusiness(business)
     setFormData((prevData) => ({
       ...prevData,
@@ -47,11 +57,15 @@ export default function BusinessListPage() {
     setIsModalOpen(true)
   }
 
-  const handleViewUsersClick = (clientId) => {
+  const handleViewUsersClick = (clientId: string) => {
     router.push(`/admin/business/businesslogins?client_id=${clientId}`)
   }
 
-  const handleChange = (e) => {
+  const handleViewFeesClick = (clientId: string) => {
+    router.push(`/admin/business/fees?client_id=${clientId}`)
+  }
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setFormData((prevData) => ({
       ...prevData,
@@ -65,7 +79,7 @@ export default function BusinessListPage() {
       if (response.status === 201) {
         fetchBusinesses()
         toast.success("Login created successfully")
-        setIsModalOpen(false)       
+        setIsModalOpen(false)
       } else {
         toast.error("Failed to create login")
       }
@@ -115,15 +129,21 @@ export default function BusinessListPage() {
                       <TableCell>{business.registration_number}</TableCell>
                       <TableCell>
                         <Button variant="outline" size="sm" onClick={() => handleCreateLoginClick(business)}>
-                          Create Logins
+                          <UserPlusIcon className="h-4 w-4 mr-1" title="Create Login" />
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
                           className="ml-2"
-                          onClick={() => handleViewUsersClick(business.client_id)}
-                        >
-                          View Users
+                          onClick={() => handleViewUsersClick(business.client_id)}>
+                          <UsersIcon className="h-4 w-4" title="Users" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="ml-2"
+                          onClick={() => handleViewFeesClick(business.client_id)}>
+                          <CurrencyDollarIcon className="h-4 w-4" title="Fees" />
                         </Button>
                       </TableCell>
                     </TableRow>

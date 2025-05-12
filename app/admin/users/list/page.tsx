@@ -10,6 +10,7 @@ import Modal from "@/components/ui/modal" // Assuming you have a modal component
 import EditUserPage from "./edit_user"
 import { get } from "@/utils/stage_api"
 import toast from "react-hot-toast"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function UsersListPage() {
   interface User {
@@ -19,8 +20,14 @@ export default function UsersListPage() {
     role: string
     isActive: boolean
   }
+
+  interface UserStats {
+    role: string
+    count: number
+  }
   
   const [users, setUsers] = useState<User[]>([])
+  const [userStats, setUserStats] = useState<UserStats[]>([])
   const [filter, setFilter] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
@@ -29,32 +36,38 @@ export default function UsersListPage() {
 
   const capitalize = (str: string) => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      setIsLoading(true)
-      setError("")
-      try {
-        const data = await get("/admin/users")
-        console.log("Fetched users:", data.data)
-    
-        // Map API response to match the User interface
-        const mappedUsers = data.data.map((user: any) => ({
-          id: user.id,
-          name: `${capitalize(user.first_name)} ${capitalize(user.last_name)}`,
-          email: user.email,
-          role: user.role,
-          isActive: true, // Assuming all users are active by default
-        }))
-    
-        setUsers(mappedUsers)
-      } catch (err) {
-        setError("Failed to fetch users. Please try again later.")
-        toast.error("Failed to fetch users.")
-      } finally {
-        setIsLoading(false)
-      }
-    }
+  const fetchUsers = async () => {
+    setIsLoading(true)
+    setError("")
+    try {
+      const [usersData, statsData] = await Promise.all([
+        get("/admin/users"),
+        get("/admin/reports/users")
+      ])
+      
+      console.log("Fetched users:", usersData.data)
+      console.log("Fetched stats:", statsData.data)
   
+      // Map API response to match the User interface
+      const mappedUsers = usersData.data.map((user: any) => ({
+        id: user.id,
+        name: `${capitalize(user.first_name)} ${capitalize(user.last_name)}`,
+        email: user.email,
+        role: user.role,
+        isActive: true, // Assuming all users are active by default
+      }))
+  
+      setUsers(mappedUsers)
+      setUserStats(statsData.data)
+    } catch (err) {
+      setError("Failed to fetch data. Please try again later.")
+      toast.error("Failed to fetch data.")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
     fetchUsers()
   }, [])
 
@@ -81,6 +94,11 @@ export default function UsersListPage() {
     setSelectedUserId(null)
   }
 
+  const handleEditSuccess = () => {
+    closeEditModal()
+    fetchUsers() // Refresh the users list
+  }
+
   return (
     <>
       {/* Loading Indicator */}
@@ -89,8 +107,23 @@ export default function UsersListPage() {
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
           <h1 className="text-2xl font-semibold text-gray-900">Users List</h1>
-        </div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+          
+          {/* User Statistics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+            {userStats.map((stat) => (
+              <Card key={stat.role}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    {capitalize(stat.role)}s
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stat.count}</div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
           <div className="py-4">
             <div className="mb-4">
               <Input
@@ -143,7 +176,7 @@ export default function UsersListPage() {
       {/* Edit User Modal */}
       {isEditModalOpen && selectedUserId !== null && (
         <Modal isOpen={isEditModalOpen} onClose={closeEditModal}>
-          <EditUserPage userId={selectedUserId} />
+          <EditUserPage userId={selectedUserId} onSuccess={handleEditSuccess} />
         </Modal>
       )}
     </>

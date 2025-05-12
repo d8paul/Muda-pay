@@ -1,22 +1,55 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import toast from "react-hot-toast"
 import ProgressBar from "@/components/ProgressBar"
-import { put } from "@/utils/stage_api"
+import { get, put } from "@/utils/stage_api"
 
-export default function EditUserPage({ userId }: { userId: number }) {
+interface EditUserPageProps {
+  userId: number
+  onSuccess?: () => void
+}
+
+export default function EditUserPage({ userId, onSuccess }: EditUserPageProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
     email: "",
-    role: "",
+    user_role: "",
+    status: "active",
+    reset_password: false
   })
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      setIsLoading(true)
+      try {
+        const response = await get(`/admin/users/${userId}`)
+        const userData = response.data
+        
+        setFormData({
+          firstName: userData.first_name || "",
+          lastName: userData.last_name || "",
+          email: userData.email || "",
+          user_role: userData.user_role || "",
+          status: userData.status || "active",
+          reset_password: false
+        })
+      } catch (error) {
+        toast.error("Failed to fetch user data")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchUserData()
+  }, [userId])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -29,7 +62,21 @@ export default function EditUserPage({ userId }: { userId: number }) {
   const handleRoleChange = (value: string) => {
     setFormData((prevData) => ({
       ...prevData,
-      role: value,
+      user_role: value,
+    }))
+  }
+
+  const handleStatusChange = (value: string) => {
+    setFormData((prevData) => ({
+      ...prevData,
+      status: value,
+    }))
+  }
+
+  const handleResetPasswordChange = (checked: boolean) => {
+    setFormData((prevData) => ({
+      ...prevData,
+      reset_password: checked,
     }))
   }
 
@@ -39,14 +86,18 @@ export default function EditUserPage({ userId }: { userId: number }) {
     setIsLoading(true)
     try {
       // API call to edit user
-      await put(`admin/users/${userId}`, {
+      await put(`/admin/users/${userId}`, {
         first_name: formData.firstName,
         last_name: formData.lastName,
         email: formData.email,
-        user_role: formData.role,
+        user_role: formData.user_role,
+        status: formData.status,
+        reset_password: formData.reset_password
       })
 
       toast.success("User updated successfully")
+      // Call the onSuccess callback if provided
+      onSuccess?.()
     } catch (error) {
       toast.error("Failed to update user. Please try again.")
     } finally {
@@ -100,16 +151,38 @@ export default function EditUserPage({ userId }: { userId: number }) {
               />
             </div>
             <div>
-              <Label htmlFor="role">Role</Label>
-              <Select onValueChange={handleRoleChange} value={formData.role}>
+              <Label htmlFor="user_role">Role</Label>
+              <Select onValueChange={handleRoleChange} value={formData.user_role}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="admin">Admin</SelectItem>
                   <SelectItem value="approver">Approver</SelectItem>
                   <SelectItem value="verifier">Verifier</SelectItem>
+                  <SelectItem value="user">User</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div>
+              <Label htmlFor="status">Status</Label>
+              <Select onValueChange={handleStatusChange} value={formData.status}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="reset_password"
+                checked={formData.reset_password}
+                onCheckedChange={handleResetPasswordChange}
+              />
+              <Label htmlFor="reset_password">Reset Password</Label>
             </div>
             <div>
               <Button type="submit" disabled={isLoading}>
