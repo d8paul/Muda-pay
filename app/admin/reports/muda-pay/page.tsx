@@ -1,53 +1,88 @@
 "use client"
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import ProgressBar from "@/components/ui/progress-bar";
-import { Label } from "@/components/ui/label";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-
-// Mock data for reports
-const tradeData = [
-  { id: 1, date: "2025-04-25", volume: 2500000, cost: 150000, spread: 1.2, profit: 300000, currency: "UGX" },
-  { id: 2, date: "2025-04-26", volume: 3200000, cost: 190000, spread: 1.1, profit: 352000, currency: "UGX" },
-  { id: 3, date: "2025-04-27", volume: 1800000, cost: 120000, spread: 1.3, profit: 234000, currency: "UGX" },
-  { id: 4, date: "2025-04-28", volume: 4500000, cost: 230000, spread: 1.0, profit: 450000, currency: "UGX" },
-];
-
-const volumeData = [
-  { month: "Jan", volume: 1450000 },
-  { month: "Feb", volume: 1820000 },
-  { month: "Mar", volume: 1930000 },
-  { month: "Apr", volume: 2100000 },
-];
-
-const userData = [
-  { month: "Jan", users: 125 },
-  { month: "Feb", users: 156 },
-  { month: "Mar", users: 189 },
-  { month: "Apr", users: 214 },
-];
-
-const reconciliationData = [
-  { id: 1, accountName: "Main Operational Account", balance: 450000000, pendingDeposits: 32000000, pendingWithdrawals: 18000000, adjustedBalance: 464000000, currency: "UGX" },
-  { id: 2, accountName: "Settlement Account", balance: 235000000, pendingDeposits: 15000000, pendingWithdrawals: 22000000, adjustedBalance: 228000000, currency: "UGX" },
-  { id: 3, accountName: "Reserve Account", balance: 780000000, pendingDeposits: 0, pendingWithdrawals: 0, adjustedBalance: 780000000, currency: "UGX" },
-  { id: 4, accountName: "Transaction Fee Account", balance: 132000000, pendingDeposits: 5000000, pendingWithdrawals: 0, adjustedBalance: 137000000, currency: "UGX" },
-];
+import SummaryCards from "./components/reports/SummaryCards";
+import TimeRangeSelector from "./components/reports/TimeRangeSelector";
+import ProfitTab from "./components/reports/ProfitTab";
+import VolumeTab from "./components/reports/VolumeTab";
+import UsersTab from "./components/reports/UsersTab";
+import ReconciliationTab from "./components/reports/ReconciliationTab";
+import { get } from "@/utils/stage_api";
+import toast from "react-hot-toast";
 
 export default function ReportsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [timeRange, setTimeRange] = useState("month");
+  const [reconciliationData, setReconciliationData] = useState([]);
+  const [summaryData, setSummaryData] = useState({
+    totalTransactions: 0,
+    totalClients: 0,
+    totalTransactionFees: 0,
+  });
+  const [error, setError] = useState("");
 
-  // Calculate totals for summary cards
-  const totalVolume = tradeData.reduce((sum, item) => sum + item.volume, 0);
-  const totalProfit = tradeData.reduce((sum, item) => sum + item.profit, 0);
-  const averageSpread = tradeData.reduce((sum, item) => sum + item.spread, 0) / tradeData.length;
-  const totalUsers = userData[userData.length - 1].users;
-  
+  // Fetch reconciliation data
+  useEffect(() => {
+    const fetchReconciliationData = async () => {
+      setIsLoading(true);
+      setError("");
+      try {
+        const data = await get("admin/reports/accounts-reconciliation");
+        console.log("Fetched reconciliation data:", data.data);
+
+        // Map API response to match the expected structure
+        const mappedData = data.data.map((account: any) => ({
+          id: account.id,
+          accountName: account.account_name,
+          balance: account.balance,
+          pendingDeposits: account.pending_deposits,
+          pendingWithdrawals: account.pending_withdrawals,
+          adjustedBalance: account.adjusted_balance,
+          currency: account.currency,
+        }));
+
+        setReconciliationData(mappedData);
+      } catch (err) {
+        setError("Failed to fetch reconciliation data. Please try again later.");
+        toast.error("Failed to fetch reconciliation data.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchReconciliationData();
+  }, []);
+
+  // Fetch summary data
+  useEffect(() => {
+    const fetchSummaryData = async () => {
+      setIsLoading(true);
+      setError("");
+      try {
+        const [transactions, clients, transactionFees] = await Promise.all([
+          get("admin/reports/total-transactions"),
+          get("admin/reports/total-clients"),
+          get("admin/reports/total-transaction-fees"),
+        ]);
+
+        setSummaryData({
+          totalTransactions: transactions.data.total || 0,
+          totalClients: clients.data.total || 0,
+          totalTransactionFees: transactionFees.data.total || 0,
+        });
+      } catch (err) {
+        setError("Failed to fetch summary data. Please try again later.");
+        toast.error("Failed to fetch summary data.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSummaryData();
+  }, []);
+
   return (
     <>
       <ProgressBar isLoading={isLoading} />
@@ -58,66 +93,14 @@ export default function ReportsPage() {
         </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-500">Total Volume</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-600">
-                  {totalVolume.toLocaleString()} UGX
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-500">Total Profit</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-600">
-                  {totalProfit.toLocaleString()} UGX
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-500">Average Spread</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-600">
-                  {averageSpread.toFixed(2)}%
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-500">Total Users</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-600">
-                  {totalUsers}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <SummaryCards 
+            totalTransactions={summaryData.totalTransactions}
+            totalClients={summaryData.totalClients}
+            totalTransactionFees={summaryData.totalTransactionFees}
+          />
 
           {/* Time Range Selector */}
-          <div className="mb-6">
-            <div className="flex items-center space-x-4">
-              <Label htmlFor="timeRange">Time Range:</Label>
-              <Select value={timeRange} onValueChange={setTimeRange}>
-                <SelectTrigger id="timeRange" className="w-[180px]">
-                  <SelectValue placeholder="Select time range" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="day">Daily</SelectItem>
-                  <SelectItem value="week">Weekly</SelectItem>
-                  <SelectItem value="month">Monthly</SelectItem>
-                  <SelectItem value="year">Yearly</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          <TimeRangeSelector timeRange={timeRange} setTimeRange={setTimeRange} />
 
           {/* Tabs for different report types */}
           <Tabs defaultValue="profit" className="w-full">
@@ -130,180 +113,26 @@ export default function ReportsPage() {
             
             {/* Profit on Trades Tab */}
             <TabsContent value="profit">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Profit on Trades</CardTitle>
-                  <CardDescription>
-                    Detailed breakdown of trade volumes, costs, spreads and profit
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {/* <div className="h-[300px] mb-6">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={tradeData}
-                        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="date" />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Bar dataKey="volume" name="Volume" fill="#4A90E2" />
-                        <Bar dataKey="profit" name="Profit" fill="#007AFF" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div> */}
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Volume (UGX)</TableHead>
-                        <TableHead>Cost (UGX)</TableHead>
-                        <TableHead>Spread (%)</TableHead>
-                        <TableHead>Profit (UGX)</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {tradeData.map((trade) => (
-                        <TableRow key={trade.id}>
-                          <TableCell>{trade.date}</TableCell>
-                          <TableCell>{trade.volume.toLocaleString()}</TableCell>
-                          <TableCell>{trade.cost.toLocaleString()}</TableCell>
-                          <TableCell>{trade.spread}%</TableCell>
-                          <TableCell>{trade.profit.toLocaleString()}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
+              <ProfitTab />
             </TabsContent>
             
             {/* Volume Report Tab */}
             <TabsContent value="volume">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Volume Report</CardTitle>
-                  <CardDescription>
-                    Total transaction volume over time
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {/* <div className="h-[300px] mb-6">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={volumeData}
-                        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="month" />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Bar dataKey="volume" name="Volume" fill="#9b87f5" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div> */}
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Month</TableHead>
-                        <TableHead>Volume (UGX)</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {volumeData.map((item, index) => (
-                        <TableRow key={index}>
-                          <TableCell>{item.month}</TableCell>
-                          <TableCell>{item.volume.toLocaleString()}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
+              <VolumeTab />
             </TabsContent>
             
             {/* User Growth Tab */}
             <TabsContent value="users">
-              <Card>
-                <CardHeader>
-                  <CardTitle>User Growth</CardTitle>
-                  <CardDescription>
-                    Number of users over time
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[300px] mb-6">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={userData}
-                        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="month" />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Bar dataKey="users" name="Users" fill="#9b87f5" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Month</TableHead>
-                        <TableHead>Number of Users</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {userData.map((item, index) => (
-                        <TableRow key={index}>
-                          <TableCell>{item.month}</TableCell>
-                          <TableCell>{item.users}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
+              <UsersTab />
             </TabsContent>
             
             {/* Account Reconciliation Tab */}
             <TabsContent value="reconciliation">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Account Reconciliation</CardTitle>
-                  <CardDescription>
-                    Reconciliation of all accounts with pending transactions
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Account Name</TableHead>
-                        <TableHead>Current Balance</TableHead>
-                        <TableHead>Pending Deposits</TableHead>
-                        <TableHead>Pending Withdrawals</TableHead>
-                        <TableHead>Adjusted Balance</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {reconciliationData.map((account) => (
-                        <TableRow key={account.id}>
-                          <TableCell>{account.accountName}</TableCell>
-                          <TableCell>{account.balance.toLocaleString()} {account.currency}</TableCell>
-                          <TableCell>{account.pendingDeposits.toLocaleString()} {account.currency}</TableCell>
-                          <TableCell>{account.pendingWithdrawals.toLocaleString()} {account.currency}</TableCell>
-                          <TableCell>{account.adjustedBalance.toLocaleString()} {account.currency}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
+              {error ? (
+                <div className="p-4 text-red-500">{error}</div>
+              ) : (
+                <ReconciliationTab reconciliationData={reconciliationData} />
+              )}
             </TabsContent>
           </Tabs>
         </div>

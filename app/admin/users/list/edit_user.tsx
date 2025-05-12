@@ -1,17 +1,15 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import toast from "react-hot-toast"
 import ProgressBar from "@/components/ProgressBar"
-import { post } from "@/utils/stage_api"
+import { put } from "@/utils/stage_api"
 
-export default function AddUserPage() {
-  const router = useRouter()
+export default function EditUserPage({ userId }: { userId: number }) {
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
     firstName: "",
@@ -40,18 +38,17 @@ export default function AddUserPage() {
 
     setIsLoading(true)
     try {
-      // API call to add user
-      await post("admin/users", {
+      // API call to edit user
+      await put(`admin/users/${userId}`, {
         first_name: formData.firstName,
         last_name: formData.lastName,
         email: formData.email,
         user_role: formData.role,
       })
 
-      toast.success("User added successfully")
-      router.push("/admin/users/list")
+      toast.success("User updated successfully")
     } catch (error) {
-      toast.error("Failed to add user. Please try again.")
+      toast.error("Failed to update user. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -62,7 +59,7 @@ export default function AddUserPage() {
       <ProgressBar isLoading={isLoading} />
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-          <h1 className="text-2xl font-semibold text-gray-900">Add User</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">Edit User</h1>
         </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
           <form onSubmit={handleSubmit} className="space-y-6 bg-white shadow px-4 py-5 sm:rounded-lg sm:p-6">
@@ -116,7 +113,7 @@ export default function AddUserPage() {
             </div>
             <div>
               <Button type="submit" disabled={isLoading}>
-                {isLoading ? "Adding User..." : "Add User"}
+                {isLoading ? "Updating User..." : "Update User"}
               </Button>
             </div>
           </form>
