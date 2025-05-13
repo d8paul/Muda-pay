@@ -10,12 +10,20 @@ import { format } from "date-fns"
 import FeeTwoFactorModal from "@/app/admin/fees/components/FeeTwoFactorModal"
 import { FaCheck, FaTimes } from "react-icons/fa" // Import icons
 
+interface Deposit {
+  trans_id: string;
+  client_id: string;
+  created_at: string;
+  amount: string;
+  memo: string;
+}
+
 export default function PendingDepositsPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const [pendingDeposits, setPendingDeposits] = useState([]);
+  const [pendingDeposits, setPendingDeposits] = useState<Deposit[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedTransId, setSelectedTransId] = useState(null);
-  const [actionType, setActionType] = useState(null); // Track action type (approve/reject)
+  const [selectedTransId, setSelectedTransId] = useState<string | null>(null);
+  const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
 
   useEffect(() => {
     const fetchPendingDeposits = async () => {
@@ -77,7 +85,7 @@ export default function PendingDepositsPage() {
     }
   };
 
-  const openModal = (trans_id, type) => {
+  const openModal = (trans_id: string, type: 'approve' | 'reject') => {
     setSelectedTransId(trans_id);
     setActionType(type);
     setIsModalOpen(true);
