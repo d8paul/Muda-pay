@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import ProgressBar from "@/components/ProgressBar"
 import { get, post } from "@/utils/api"
+import { get as getApi, post as postApi } from "@/utils/stage_api"
 import { PlusIcon, PencilIcon, TrashIcon } from "@heroicons/react/24/outline"
 import toast from "react-hot-toast"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -78,8 +79,8 @@ export default function BusinessFeesPage() {
       setIsLoading(true)
       try {
         const [feesResponse, businessResponse] = await Promise.all([
-          get(`/admin/company-fees/${clientId}`),
-          get(`/admin/clients/${clientId}`)
+          getApi(`/admin/company-fees/${clientId}`),
+          getApi(`/admin/clients/${clientId}`)
         ])
 
         setFees(feesResponse.data || [])
