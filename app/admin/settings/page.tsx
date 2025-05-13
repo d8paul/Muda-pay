@@ -1,8 +1,9 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { post } from "@/utils/api"
+import { get as get2, post as post2, put as put2 } from "@/utils/stage_api"
 import toast from "react-hot-toast"
 import ProgressBar from "@/components/ProgressBar"
 import { Card } from "@/components/ui/card"
@@ -20,15 +21,31 @@ export default function AdminSettingsPage() {
   const [qrCodeUrl, setQrCodeUrl] = useState("")
   const [verificationCode, setVerificationCode] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [show2FABanner, setShow2FABanner] = useState(false)
+
+  const checkTwoFactorStatus = async () => {
+    try {
+      const response = await get2("/admin/users/2fa/status", {})
+      const isEnabled = response.data.status === "active"
+      setTwoFactorEnabled(isEnabled)
+      console.log("2FA Status:", { isEnabled, showingBanner: !isEnabled })
+      setShow2FABanner(!isEnabled)
+    } catch (error) {
+      console.error("Error checking 2FA status:", error)
+    }
+  }
+
+  useEffect(() => {
+    checkTwoFactorStatus()
+  }, [])
 
   const handleTwoFactorToggle = async (checked: boolean) => {
     if (checked && !twoFactorEnabled) {
       // Enable 2FA
       try {
         setIsLoading(true)
-        setShowQRCode(true)
-        const response = await post("clients/enable-2fa/init", {})
-        setQrCodeUrl(response.data.qr_code_url)
+        const response = await get2("/admin/users/2fa/code", {})
+        setQrCodeUrl(response.data.url)
         setShowQRCode(true)
       } catch (error) {
         console.error("Error initializing 2FA:", error)
@@ -40,7 +57,10 @@ export default function AdminSettingsPage() {
       // Disable 2FA
       try {
         setIsLoading(true)
-        await post("clients/disable-2fa", {})
+        await put2("/admin/users/2fa/update", {
+          two_fa_token: "",
+          status: "inactive"
+        })
         toast.success("Two-factor authentication disabled")
         setTwoFactorEnabled(false)
         setShowQRCode(false)
@@ -60,7 +80,13 @@ export default function AdminSettingsPage() {
 
     try {
       setIsLoading(true)
-      await post("clients/enable-2fa/verify", { code: verificationCode })
+      await post2("/admin/users/2fa/verify/code", { token: verificationCode })
+      // Update 2FA status after successful verification
+      await put2("/admin/users/2fa/update", {
+        two_fa_token: verificationCode,
+        status: "active"
+      })
+      setShow2FABanner(false)
       toast.success("Two-factor authentication enabled")
       setTwoFactorEnabled(true)
       setShowQRCode(false)
@@ -97,6 +123,28 @@ export default function AdminSettingsPage() {
   return (
     <>
       <ProgressBar isLoading={isLoading} />
+      {show2FABanner && (
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-yellow-700">
+                Please set up Two-Factor Authentication (2FA) with Google Authenticator for enhanced security.
+                <button
+                  onClick={() => setShow2FABanner(false)}
+                  className="ml-2 text-yellow-700 hover:text-yellow-900 font-medium underline"
+                >
+                  Dismiss
+                </button>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
           <h1 className="text-2xl font-semibold text-gray-900">Settings</h1>

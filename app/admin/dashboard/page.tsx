@@ -8,6 +8,12 @@ import ProgressBar from "@/components/ProgressBar"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts"
 import { get } from "@/utils/api"
 
+interface StatsItem {
+  name: string
+  value: number
+  icon: React.ElementType
+}
+
 // Hardcoded data for bar chart
 const barChartData = [
   { name: "Jan", value: 4000 },
@@ -30,7 +36,7 @@ const lineChartData = [
 
 export default function AdminDashboardPage() {
   const [isLoading, setIsLoading] = useState(true)
-  const [statsData, setStatsData] = useState([])
+  const [statsData, setStatsData] = useState<StatsItem[]>([])
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -38,7 +44,7 @@ export default function AdminDashboardPage() {
         const response = await get("admin/get-stats")
         const { data } = response
 
-        const mappedStats = [
+        const mappedStats: StatsItem[] = [
           { name: "Total Collections", value: data.collections, icon: BanknotesIcon },
           { name: "Total Payouts", value: data.payouts, icon: BanknotesIcon },
           { name: "Total Revenue", value: data.revenue, icon: BanknotesIcon },
