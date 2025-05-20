@@ -50,7 +50,7 @@ const menuItems = [
     name: "Reports",
     icon: ChartBarIcon,
     submenu: [
-      { name: "Accounts", path: "/admin/reports/liquidity-rail" },
+      { name: "Liquidity Rail", path: "/admin/reports/liquidity-rail" },
       { name: "Collections", path: "/admin/reports/collections-report" },
       { name: "Payout", path: "/admin/reports/payout-report" },
       { name: "Off Ram", path: "/admin/reports/off-ram-report" },

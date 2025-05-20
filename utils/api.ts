@@ -2,8 +2,8 @@ import axios from "axios"
 import toast from "react-hot-toast"
 
 const api = axios.create({
-  baseURL: "https://api.muda.tech/web/",
-  // baseURL: "http://localhost:8035",
+  //baseURL: "https://api.muda.tech/web/",
+  baseURL: "https://ag-api.bavana.site/",
 })
 
 // Add a request interceptor

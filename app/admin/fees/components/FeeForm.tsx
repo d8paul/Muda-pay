@@ -106,7 +106,7 @@ const FeeForm = ({ initialData, onSubmit, onCancel, isLoading }: FeeFormProps) =
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>{initialData ? "Edit Transaction Fee" : "Create Transaction Fee"}</CardTitle>
+        <CardTitle>{initialData ? "Edit Transaction Fee" : "Create company Transaction Fee"}</CardTitle>
         <CardDescription>
           {initialData
             ? "Update the details of the existing transaction fee"

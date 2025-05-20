@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import toast from "react-hot-toast"
 import ProgressBar from "@/components/ProgressBar"
-import { get, put } from "@/utils/stage_api"
+import { get, put } from "@/utils/api"
 
 interface EditUserPageProps {
   userId: number

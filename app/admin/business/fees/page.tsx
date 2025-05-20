@@ -5,8 +5,8 @@ import { useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import ProgressBar from "@/components/ProgressBar"
-import { get, post } from "@/utils/api"
-import { get as getApi, post as postApi } from "@/utils/stage_api"
+import { get, post, del, put } from "@/utils/api"
+import { get as getApi, post as postApi } from "@/utils/api"
 import { PlusIcon, PencilIcon, TrashIcon } from "@heroicons/react/24/outline"
 import toast from "react-hot-toast"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -29,34 +29,40 @@ import { Switch } from "@/components/ui/switch"
 
 interface CompanyFee {
   id: string
-  name: string
-  type: "percentage" | "fixed"
-  value: number
-  minAmount: number
-  maxAmount: number | null
-  applicableTo: string
-  status: "active" | "inactive"
+  label: string
+  fee_name: string
+  currency_type: "UGX" | "USD" | "EUR"
+  fee_type: "percentage" | "flat"
+  percentage_value: string
+  minimum_amount: string
+  maximum_amount: string
+  applicable_to: "withdrawals" | "deposits" | "all"
+  active_status: boolean
   updatedAt: string
 }
 
 interface FeeFormData {
-  name: string
-  type: "percentage" | "fixed"
-  value: string
-  minAmount: string
-  maxAmount: string
-  applicableTo: string
-  status: "active" | "inactive"
+  label: string
+  fee_name: string
+  currency_type: "UGX" | "USD" | "EUR"
+  fee_type: "percentage" | "flat"
+  percentage_value: string
+  minimum_amount: string
+  maximum_amount: string
+  applicable_to: "withdrawals" | "deposits" | "all"
+  active_status: boolean
 }
 
 const initialFormData: FeeFormData = {
-  name: "",
-  type: "percentage",
-  value: "",
-  minAmount: "",
-  maxAmount: "",
-  applicableTo: "all",
-  status: "active"
+  label: "",
+  fee_name: "",
+  currency_type: "UGX",
+  fee_type: "percentage",
+  percentage_value: "",
+  minimum_amount: "",
+  maximum_amount: "",
+  applicable_to: "withdrawals",
+  active_status: true
 }
 
 export default function BusinessFeesPage() {
@@ -79,7 +85,7 @@ export default function BusinessFeesPage() {
       setIsLoading(true)
       try {
         const [feesResponse, businessResponse] = await Promise.all([
-          getApi(`/admin/company-fees/${clientId}`),
+          getApi(`/admin/business/${clientId}/fees`),
           getApi(`/admin/clients/${clientId}`)
         ])
 
@@ -106,7 +112,7 @@ export default function BusinessFeesPage() {
 
     setIsLoading(true)
     try {
-      await get(`/admin/company-fees/${clientId}/delete/${feeToDelete}`)
+      await del(`/admin/business/${clientId}/fees/${feeToDelete}`)
       setFees(fees.filter(fee => fee.id !== feeToDelete))
       toast.success("Fee deleted successfully")
     } catch (error) {
@@ -121,13 +127,15 @@ export default function BusinessFeesPage() {
 
   const handleEditClick = (fee: CompanyFee) => {
     setFormData({
-      name: fee.name,
-      type: fee.type,
-      value: fee.value.toString(),
-      minAmount: fee.minAmount.toString(),
-      maxAmount: fee.maxAmount?.toString() || "",
-      applicableTo: fee.applicableTo,
-      status: fee.status
+      label: fee.label,
+      fee_name: fee.fee_name,
+      currency_type: fee.currency_type,
+      fee_type: fee.fee_type,
+      percentage_value: fee.percentage_value,
+      minimum_amount: fee.minimum_amount,
+      maximum_amount: fee.maximum_amount,
+      applicable_to: fee.applicable_to,
+      active_status: fee.active_status
     })
     setEditingFeeId(fee.id)
     setIsEditing(true)
@@ -154,22 +162,19 @@ export default function BusinessFeesPage() {
     try {
       const payload = {
         ...formData,
-        value: parseFloat(formData.value),
-        minAmount: parseFloat(formData.minAmount),
-        maxAmount: formData.maxAmount ? parseFloat(formData.maxAmount) : null,
         client_id: clientId
       }
 
       if (isEditing && editingFeeId) {
-        await post(`/admin/company-fees/${clientId}/update/${editingFeeId}`, payload)
+        await put(`/admin/business/${clientId}/fees/${editingFeeId}`, payload)
         toast.success("Fee updated successfully")
       } else {
-        await post("/admin/company-fees/create", payload)
+        await post(`/admin/business/${clientId}/fees`, payload)
         toast.success("Fee created successfully")
       }
 
       // Refresh fees list
-      const response = await get(`/admin/company-fees/${clientId}`)
+      const response = await get(`/admin/business/${clientId}/fees`)
       setFees(response.data || [])
       
       // Reset form and switch to view tab
@@ -240,7 +245,8 @@ export default function BusinessFeesPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[180px]">Fee Name</TableHead>
+                      <TableHead className="w-[180px]">Fee Label</TableHead>
+                      <TableHead>Fee Name</TableHead>
                       <TableHead>Type</TableHead>
                       <TableHead>Value</TableHead>
                       <TableHead>Min Amount</TableHead>
@@ -254,7 +260,7 @@ export default function BusinessFeesPage() {
                   <TableBody>
                     {fees.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={9} className="text-center py-10">
+                        <TableCell colSpan={10} className="text-center py-10">
                           {isLoading ? (
                             <p className="text-muted-foreground">Loading fees...</p>
                           ) : (
@@ -265,30 +271,31 @@ export default function BusinessFeesPage() {
                     ) : (
                       fees.map((fee) => (
                         <TableRow key={fee.id}>
-                          <TableCell className="font-medium">{fee.name}</TableCell>
-                          <TableCell className="capitalize">{fee.type}</TableCell>
+                          <TableCell className="font-medium">{fee.label}</TableCell>
+                          <TableCell>{fee.fee_name}</TableCell>
+                          <TableCell className="capitalize">{fee.fee_type}</TableCell>
                           <TableCell>
-                            {fee.type === "percentage"
-                              ? `${fee.value}%`
-                              : `UGX ${formatCurrency(fee.value)}`}
+                            {fee.fee_type === "percentage"
+                              ? `${fee.percentage_value}%`
+                              : `${fee.currency_type} ${formatCurrency(Number(fee.percentage_value))}`}
                           </TableCell>
-                          <TableCell>UGX {formatCurrency(fee.minAmount)}</TableCell>
+                          <TableCell>{fee.currency_type} {formatCurrency(Number(fee.minimum_amount))}</TableCell>
                           <TableCell>
-                            {fee.maxAmount
-                              ? `UGX ${formatCurrency(fee.maxAmount)}`
+                            {fee.maximum_amount
+                              ? `${fee.currency_type} ${formatCurrency(Number(fee.maximum_amount))}`
                               : "No limit"}
                           </TableCell>
-                          <TableCell className="capitalize">{fee.applicableTo}</TableCell>
+                          <TableCell className="capitalize">{fee.applicable_to}</TableCell>
                           <TableCell>
                             <Badge
-                              variant={fee.status === "active" ? "default" : "secondary"}
+                              variant={fee.active_status ? "default" : "secondary"}
                               className={
-                                fee.status === "active"
+                                fee.active_status
                                   ? "bg-green-100 text-green-800 hover:bg-green-100"
                                   : "bg-gray-100 text-gray-800 hover:bg-gray-100"
                               }
                             >
-                              {fee.status}
+                              {fee.active_status ? "Active" : "Inactive"}
                             </Badge>
                           </TableCell>
                           <TableCell>{formatDate(fee.updatedAt)}</TableCell>
@@ -332,72 +339,100 @@ export default function BusinessFeesPage() {
                   <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} className="space-y-6">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="name">Fee Name</Label>
+                        <Label htmlFor="label">Fee Label</Label>
                         <Input
-                          id="name"
-                          value={formData.name}
-                          onChange={(e) => handleFormChange("name", e.target.value)}
+                          id="label"
+                          value={formData.label}
+                          onChange={(e) => handleFormChange("label", e.target.value)}
+                          placeholder="Enter fee label"
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="fee_name">Fee Name</Label>
+                        <Input
+                          id="fee_name"
+                          value={formData.fee_name}
+                          onChange={(e) => handleFormChange("fee_name", e.target.value)}
                           placeholder="Enter fee name"
                           required
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="type">Fee Type</Label>
+                        <Label htmlFor="currency_type">Currency Type</Label>
                         <Select
-                          value={formData.type}
-                          onValueChange={(value) => handleFormChange("type", value as "percentage" | "fixed")}
+                          value={formData.currency_type}
+                          onValueChange={(value) => handleFormChange("currency_type", value as "UGX" | "USD" | "EUR")}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select currency" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="UGX">UGX</SelectItem>
+                            <SelectItem value="USD">USD</SelectItem>
+                            <SelectItem value="EUR">EUR</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="fee_type">Fee Type</Label>
+                        <Select
+                          value={formData.fee_type}
+                          onValueChange={(value) => handleFormChange("fee_type", value as "percentage" | "flat")}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Select fee type" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="percentage">Percentage</SelectItem>
-                            <SelectItem value="fixed">Fixed Amount</SelectItem>
+                            <SelectItem value="flat">Flat Amount</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="value">Value</Label>
+                        <Label htmlFor="percentage_value">Value</Label>
                         <Input
-                          id="value"
+                          id="percentage_value"
                           type="number"
-                          value={formData.value}
-                          onChange={(e) => handleFormChange("value", e.target.value)}
-                          placeholder={formData.type === "percentage" ? "Enter percentage" : "Enter amount"}
+                          value={formData.percentage_value}
+                          onChange={(e) => handleFormChange("percentage_value", e.target.value)}
+                          placeholder={formData.fee_type === "percentage" ? "Enter percentage" : "Enter amount"}
                           required
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="minAmount">Minimum Amount</Label>
+                        <Label htmlFor="minimum_amount">Minimum Amount</Label>
                         <Input
-                          id="minAmount"
+                          id="minimum_amount"
                           type="number"
-                          value={formData.minAmount}
-                          onChange={(e) => handleFormChange("minAmount", e.target.value)}
+                          value={formData.minimum_amount}
+                          onChange={(e) => handleFormChange("minimum_amount", e.target.value)}
                           placeholder="Enter minimum amount"
                           required
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="maxAmount">Maximum Amount (Optional)</Label>
+                        <Label htmlFor="maximum_amount">Maximum Amount (Optional)</Label>
                         <Input
-                          id="maxAmount"
+                          id="maximum_amount"
                           type="number"
-                          value={formData.maxAmount}
-                          onChange={(e) => handleFormChange("maxAmount", e.target.value)}
+                          value={formData.maximum_amount}
+                          onChange={(e) => handleFormChange("maximum_amount", e.target.value)}
                           placeholder="Enter maximum amount"
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="applicableTo">Applicable To</Label>
+                        <Label htmlFor="applicable_to">Applicable To</Label>
                         <Select
-                          value={formData.applicableTo}
-                          onValueChange={(value) => handleFormChange("applicableTo", value)}
+                          value={formData.applicable_to}
+                          onValueChange={(value) => handleFormChange("applicable_to", value as "withdrawals" | "deposits" | "all")}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Select applicable type" />
@@ -414,11 +449,11 @@ export default function BusinessFeesPage() {
                         <Label>Status</Label>
                         <div className="flex items-center space-x-2">
                           <Switch
-                            checked={formData.status === "active"}
-                            onCheckedChange={(checked) => handleFormChange("status", checked ? "active" : "inactive")}
+                            checked={formData.active_status}
+                            onCheckedChange={(checked) => handleFormChange("active_status", checked)}
                           />
                           <span className="text-sm text-gray-500">
-                            {formData.status === "active" ? "Active" : "Inactive"}
+                            {formData.active_status ? "Active" : "Inactive"}
                           </span>
                         </div>
                       </div>

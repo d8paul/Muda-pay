@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch"
 import ProgressBar from "@/components/ProgressBar"
 import Modal from "@/components/ui/modal" // Assuming you have a modal component
 import EditUserPage from "./edit_user"
-import { get } from "@/utils/stage_api"
+import { get } from "@/utils/api"
 import toast from "react-hot-toast"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
