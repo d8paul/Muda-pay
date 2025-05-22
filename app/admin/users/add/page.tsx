@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import toast from "react-hot-toast"
 import ProgressBar from "@/components/ProgressBar"
-import { post } from "@/utils/stage_api"
+import { post } from "@/utils/api"
 
 export default function AddUserPage() {
   const router = useRouter()

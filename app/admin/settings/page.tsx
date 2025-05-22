@@ -3,7 +3,7 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { post } from "@/utils/api"
-import { get as get2, post as post2, put as put2 } from "@/utils/stage_api"
+import { get as get2, post as post2, put as put2 } from "@/utils/api"
 import toast from "react-hot-toast"
 import ProgressBar from "@/components/ProgressBar"
 import { Card } from "@/components/ui/card"
