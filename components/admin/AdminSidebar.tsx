@@ -50,21 +50,26 @@ const menuItems = [
     name: "Reports",
     icon: ChartBarIcon,
     submenu: [
-      { name: "Liquidity Rail", path: "/admin/reports/liquidity-rail" },
+      {
+        name: "Liquidity Rail",
+        submenu: [
+          { name: "Transactions", path: "/admin/reports/liquidity-rail?tab=transactions" },
+          { name: "Clients", path: "/admin/reports/liquidity-rail?tab=clients" },
+          { name: "Providers", path: "/admin/reports/liquidity-rail?tab=providers" },
+          { name: "Fees", path: "/admin/reports/liquidity-rail?tab=fees" },
+        ],
+      },
       { name: "Collections", path: "/admin/reports/collections-report" },
       { name: "Payout", path: "/admin/reports/payout-report" },
-      { name: "Off Ram", path: "/admin/reports/off-ram-report" },
-      { name: "Balances", path: "/admin/reports/balances-report" },
       { name: "Charges", path: "/admin/reports/charges-report" },
       { name: "Wallets", path: "/admin/reports/wallet-report" },
-      { name: "other", path: "/admin/reports/muda-pay" },
     ],
-  },
+  },/* 
   {
     name: "Fees",
     icon: DocumentCurrencyDollarIcon,
     path: "/admin/fees",
-  },
+  }, */
   { name: "Settings", icon: Cog6ToothIcon, path: "/admin/settings" },
 ]
 
@@ -99,19 +104,55 @@ export default function AdminSidebar() {
           </button>
           {openDropdowns.includes(item.name) && (
             <div className="ml-8 mt-2 space-y-1">
-              {item.submenu.map((subItem: any) => (
-                <Link
-                  key={subItem.name}
-                  href={subItem.path}
-                  className={`${
-                    isActive(subItem.path)
-                      ? "bg-[#26a0ff] text-white"
-                      : "text-gray-700 hover:bg-[#26a0ff] hover:text-white"
-                  } group flex items-center px-2 py-2 text-sm font-medium rounded-md`}
-                >
-                  {subItem.name}
-                </Link>
-              ))}
+              {item.submenu.map((subItem: any) => {
+                if (subItem.submenu) {
+                  return (
+                    <div key={subItem.name}>
+                      <button
+                        onClick={() => toggleDropdown(subItem.name)}
+                        className="w-full text-left text-gray-700 hover:bg-[#26a0ff] hover:text-white group flex items-center px-2 py-2 text-sm font-medium rounded-md"
+                      >
+                        {subItem.name}
+                        <ChevronDownIcon
+                          className={`ml-auto h-5 w-5 transform transition-transform duration-200 ${
+                            openDropdowns.includes(subItem.name) ? "rotate-180" : ""
+                          }`}
+                        />
+                      </button>
+                      {openDropdowns.includes(subItem.name) && (
+                        <div className="ml-8 mt-2 space-y-1">
+                          {subItem.submenu.map((nestedItem: any) => (
+                            <Link
+                              key={nestedItem.name}
+                              href={nestedItem.path}
+                              className={`${
+                                isActive(nestedItem.path)
+                                  ? "bg-[#26a0ff] text-white"
+                                  : "text-gray-700 hover:bg-[#26a0ff] hover:text-white"
+                              } group flex items-center px-2 py-2 text-sm font-medium rounded-md`}
+                            >
+                              {nestedItem.name}
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                }
+                return (
+                  <Link
+                    key={subItem.name}
+                    href={subItem.path}
+                    className={`${
+                      isActive(subItem.path)
+                        ? "bg-[#26a0ff] text-white"
+                        : "text-gray-700 hover:bg-[#26a0ff] hover:text-white"
+                    } group flex items-center px-2 py-2 text-sm font-medium rounded-md`}
+                  >
+                    {subItem.name}
+                  </Link>
+                )
+              })}
             </div>
           )}
         </div>

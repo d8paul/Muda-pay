@@ -1,9 +1,19 @@
 import axios from "axios"
 import toast from "react-hot-toast"
 
+const getBaseURL = () => {
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname
+    if (hostname === 'payments.muda.tech') {
+      return 'https://api.muda.tech/web/'
+    }
+    return 'https://ag-api.bavana.site/'
+  }
+  return 'https://ag-api.bavana.site/' // Default for server-side rendering
+}
+
 const api = axios.create({
-  //baseURL: "https://api.muda.tech/web/",
-  baseURL: "https://ag-api.bavana.site/",
+  baseURL: getBaseURL(),
 })
 
 // Add a request interceptor

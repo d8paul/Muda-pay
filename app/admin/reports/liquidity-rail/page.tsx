@@ -1,5 +1,6 @@
 "use client"
 
+import { useSearchParams } from "next/navigation"
 import { useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,7 +10,8 @@ import ProvidersTab from "./components/ProvidersTab"
 import FeesTab from "./components/FeesTab"
 
 export default function LiquidityRailReportsPage() {
-  const [activeTab, setActiveTab] = useState("transactions")
+  const searchParams = useSearchParams()
+  const activeTab = searchParams.get("tab") || "transactions"
   const [selectedClientId, setSelectedClientId] = useState<string>("10819033") // Default client ID
 
   return (
@@ -22,14 +24,7 @@ export default function LiquidityRailReportsPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 mt-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="mb-6">
-            <TabsTrigger value="transactions">Transactions</TabsTrigger>
-            <TabsTrigger value="clients">Clients</TabsTrigger>
-            <TabsTrigger value="providers">Providers</TabsTrigger>
-            <TabsTrigger value="fees">Fees</TabsTrigger>
-          </TabsList>
-
+        <Tabs value={activeTab} className="w-full">
           <TabsContent value="transactions">
             <Card>
               <CardHeader>
