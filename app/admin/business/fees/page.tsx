@@ -1,13 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import ProgressBar from "@/components/ProgressBar"
 import { get, post, del, put } from "@/utils/api"
-import { get as getApi, post as postApi } from "@/utils/api"
 import { PlusIcon, PencilIcon, TrashIcon } from "@heroicons/react/24/outline"
+import { ChevronLeft } from "lucide-react"
 import toast from "react-hot-toast"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
@@ -29,16 +29,19 @@ import { Switch } from "@/components/ui/switch"
 
 interface CompanyFee {
   id: string
+  client_id: string
   label: string
   fee_name: string
-  currency_type: "UGX" | "USD" | "EUR"
   fee_type: "percentage" | "flat"
-  percentage_value: string
-  minimum_amount: string
-  maximum_amount: string
+  currency_type: "UGX" | "USD" | "EUR"
+  percentage_value: number
+  minimum_amount: number
+  maximum_amount: number
   applicable_to: "withdrawals" | "deposits" | "all"
-  active_status: boolean
-  updatedAt: string
+  active_status: number
+  created_at: string
+  updated_at: string
+  deleted_at: string | null
 }
 
 interface FeeFormData {
@@ -46,11 +49,11 @@ interface FeeFormData {
   fee_name: string
   currency_type: "UGX" | "USD" | "EUR"
   fee_type: "percentage" | "flat"
-  percentage_value: string
-  minimum_amount: string
-  maximum_amount: string
+  percentage_value: number
+  minimum_amount: number
+  maximum_amount: number
   applicable_to: "withdrawals" | "deposits" | "all"
-  active_status: boolean
+  active_status: number
 }
 
 const initialFormData: FeeFormData = {
@@ -58,15 +61,16 @@ const initialFormData: FeeFormData = {
   fee_name: "",
   currency_type: "UGX",
   fee_type: "percentage",
-  percentage_value: "",
-  minimum_amount: "",
-  maximum_amount: "",
+  percentage_value: 0,
+  minimum_amount: 0,
+  maximum_amount: 0,
   applicable_to: "withdrawals",
-  active_status: true
+  active_status: 1
 }
 
 export default function BusinessFeesPage() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const clientId = searchParams.get("client_id")
   const [isLoading, setIsLoading] = useState(true)
   const [fees, setFees] = useState<CompanyFee[]>([])
@@ -85,8 +89,8 @@ export default function BusinessFeesPage() {
       setIsLoading(true)
       try {
         const [feesResponse, businessResponse] = await Promise.all([
-          getApi(`/admin/business/${clientId}/fees`),
-          getApi(`/admin/clients/${clientId}`)
+          get(`/admin/business/${clientId}/fees`),
+          get(`/admin/clients/${clientId}`)
         ])
 
         setFees(feesResponse.data || [])
@@ -108,7 +112,7 @@ export default function BusinessFeesPage() {
   }
 
   const confirmDelete = async () => {
-    if (!feeToDelete) return
+    if (!feeToDelete || !clientId) return
 
     setIsLoading(true)
     try {
@@ -142,7 +146,7 @@ export default function BusinessFeesPage() {
     setActiveTab("create-fee")
   }
 
-  const handleFormChange = (field: keyof FeeFormData, value: string | boolean) => {
+  const handleFormChange = (field: keyof FeeFormData, value: string | boolean | number) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -174,8 +178,8 @@ export default function BusinessFeesPage() {
       }
 
       // Refresh fees list
-      const response = await get(`/admin/business/${clientId}/fees`)
-      setFees(response.data || [])
+      const feesResponse = await get(`/admin/business/${clientId}/fees`)
+      setFees(feesResponse.data || [])
       
       // Reset form and switch to view tab
       resetForm()
@@ -216,6 +220,14 @@ export default function BusinessFeesPage() {
       <ProgressBar isLoading={isLoading} />
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+          <Button
+            variant="ghost"
+            className="mb-4"
+            onClick={() => router.push("/admin/business/businesslist")}
+          >
+            <ChevronLeft className="h-4 w-4 mr-2" />
+            Back to Businesses
+          </Button>
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-2xl font-semibold text-gray-900">
@@ -277,28 +289,28 @@ export default function BusinessFeesPage() {
                           <TableCell>
                             {fee.fee_type === "percentage"
                               ? `${fee.percentage_value}%`
-                              : `${fee.currency_type} ${formatCurrency(Number(fee.percentage_value))}`}
+                              : `${fee.currency_type} ${formatCurrency(fee.percentage_value)}`}
                           </TableCell>
-                          <TableCell>{fee.currency_type} {formatCurrency(Number(fee.minimum_amount))}</TableCell>
+                          <TableCell>{fee.currency_type} {formatCurrency(fee.minimum_amount)}</TableCell>
                           <TableCell>
                             {fee.maximum_amount
-                              ? `${fee.currency_type} ${formatCurrency(Number(fee.maximum_amount))}`
+                              ? `${fee.currency_type} ${formatCurrency(fee.maximum_amount)}`
                               : "No limit"}
                           </TableCell>
                           <TableCell className="capitalize">{fee.applicable_to}</TableCell>
                           <TableCell>
                             <Badge
-                              variant={fee.active_status ? "default" : "secondary"}
+                              variant={fee.active_status === 1 ? "default" : "secondary"}
                               className={
-                                fee.active_status
+                                fee.active_status === 1
                                   ? "bg-green-100 text-green-800 hover:bg-green-100"
                                   : "bg-gray-100 text-gray-800 hover:bg-gray-100"
                               }
                             >
-                              {fee.active_status ? "Active" : "Inactive"}
+                              {fee.active_status === 1 ? "Active" : "Inactive"}
                             </Badge>
                           </TableCell>
-                          <TableCell>{formatDate(fee.updatedAt)}</TableCell>
+                          <TableCell>{formatDate(fee.updated_at)}</TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end space-x-2">
                               <Button
@@ -449,11 +461,11 @@ export default function BusinessFeesPage() {
                         <Label>Status</Label>
                         <div className="flex items-center space-x-2">
                           <Switch
-                            checked={formData.active_status}
-                            onCheckedChange={(checked) => handleFormChange("active_status", checked)}
+                            checked={formData.active_status === 1}
+                            onCheckedChange={(checked) => handleFormChange("active_status", checked ? 1 : 0)}
                           />
                           <span className="text-sm text-gray-500">
-                            {formData.active_status ? "Active" : "Inactive"}
+                            {formData.active_status === 1 ? "Active" : "Inactive"}
                           </span>
                         </div>
                       </div>

@@ -9,8 +9,12 @@ import FeesTable from "./components/FeesTable";
 import FeeFilters, { FeeFilters as FeeFiltersType } from "./components/FeeFilters";
 import { TransactionFee, feesApi } from "@/lib/fees";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function TransactionFeesPage() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [fees, setFees] = useState<TransactionFee[]>([]);
   const [editingFee, setEditingFee] = useState<TransactionFee | null>(null);
@@ -127,6 +131,14 @@ export default function TransactionFeesPage() {
       <ProgressBar isLoading={isLoading} />
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+          <Button
+            variant="ghost"
+            className="mb-4"
+            onClick={() => router.push("/admin/businesses")}
+          >
+            <ChevronLeft className="h-4 w-4 mr-2" />
+            Back to Businesses
+          </Button>
           <h1 className="text-2xl font-semibold text-gray-900 mb-1">Transaction Fees</h1>
           <p className="text-gray-500 mb-6">Manage your transaction fee structure</p>
         </div>
