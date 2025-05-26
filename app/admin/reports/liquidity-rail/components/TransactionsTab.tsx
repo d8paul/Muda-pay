@@ -8,12 +8,17 @@ import { Label } from "@/components/ui/label"
 import { get } from "@/utils/api"
 import ProgressBar from "@/components/ProgressBar"
 import toast from "react-hot-toast"
+import { Button } from "@/components/ui/button"
+import { ChevronLeft, ChevronRight } from "lucide-react"
+import { DateRange } from "react-day-picker"
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { DatePickerWithRange } from "@/components/ui/date-range-picker"
+import { addDays } from "date-fns"
 
 interface Transaction {
   id: number
@@ -26,6 +31,7 @@ interface Transaction {
   account_number: string
   status: string
   pay_in_status: string
+  provider: string
   created_on: string
   fee: string
   narration: string | null
@@ -48,8 +54,11 @@ interface TransactionResponse {
 interface SearchFilters {
   searchTerm: string
   status: string
+  payInStatus: string
   sendAsset: string
   receiveCurrency: string
+  provider: string
+  dateRange: DateRange | undefined
 }
 
 const TransactionsTab = () => {
@@ -58,60 +67,63 @@ const TransactionsTab = () => {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null)
   const [filters, setFilters] = useState<SearchFilters>({
     searchTerm: "",
-    status: "all",
-    sendAsset: "all",
-    receiveCurrency: "all"
+    status: "",
+    payInStatus: "",
+    sendAsset: "",
+    receiveCurrency: "",
+    provider: "all",
+    dateRange: undefined
   })
-  const [currentPage, setCurrentPage] = useState(1)
-  const [hasMore, setHasMore] = useState(true)
+  const [pagination, setPagination] = useState<Pagination>({
+    current_page: 1,
+    next_page: null,
+    previous_page: null,
+    total_pages: 1,
+    total_items: 0,
+    items_per_page: 10
+  })
 
-  const fetchTransactions = async (page: number = 1, append: boolean = false) => {
+  const fetchTransactions = async (page: number = 1) => {
     setIsLoading(true)
     try {
       const queryParams = new URLSearchParams({
         page: page.toString(),
-        limit: "14",
-        ...(filters.status !== 'all' && { status: filters.status }),
-        ...(filters.sendAsset !== 'all' && { send_asset: filters.sendAsset }),
-        ...(filters.receiveCurrency !== 'all' && { receive_currency: filters.receiveCurrency }),
-        ...(filters.searchTerm && { search: filters.searchTerm })
+        limit: pagination.items_per_page.toString(),
+        ...(filters.status && { status: filters.status }),
+        ...(filters.payInStatus && { pay_in_status: filters.payInStatus }),
+        ...(filters.sendAsset && { send_asset: filters.sendAsset }),
+        ...(filters.receiveCurrency && { receive_currency: filters.receiveCurrency }),
+        ...(filters.provider !== 'all' && { provider: filters.provider }),
+        ...(filters.searchTerm && { search: filters.searchTerm }),
+        ...(filters.dateRange && { from_date: filters.dateRange.from?.toISOString(), to_date: filters.dateRange.to?.toISOString() })
       })
 
       const response = await get(`/admin/reports/rails/transactions?${queryParams.toString()}`)
       const data = response.data as TransactionResponse
       
-      if (append) {
-        setTransactions(prev => [...prev, ...data.items])
-      } else {
-        setTransactions(data.items)
-      }
-      
-      setHasMore(data.pagination.next_page !== null)
+      setTransactions(data.items)
+      setPagination(data.pagination)
     } catch (error) {
       console.error("Error fetching transactions:", error)
       toast.error("Failed to fetch transactions")
-      if (!append) {
-        setTransactions([])
-      }
+      setTransactions([])
     } finally {
       setIsLoading(false)
     }
   }
 
   useEffect(() => {
-    setCurrentPage(1)
-    setHasMore(true)
-    fetchTransactions(1, false)
-  }, [filters.status, filters.sendAsset, filters.receiveCurrency, filters.searchTerm])
-
-  const handleLoadMore = () => {
-    const nextPage = currentPage + 1
-    setCurrentPage(nextPage)
-    fetchTransactions(nextPage, true)
-  }
+    fetchTransactions(1)
+  }, [filters, pagination.items_per_page])
 
   const handleFilterChange = (key: keyof SearchFilters, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }))
+    setPagination(prev => ({ ...prev, current_page: 1 }))
+  }
+
+  const handlePageChange = (page: number) => {
+    setPagination(prev => ({ ...prev, current_page: page }))
+    fetchTransactions(page)
   }
 
   const formatDate = (dateString: string) => {
@@ -119,7 +131,7 @@ const TransactionsTab = () => {
   }
 
   const getStatusColor = (status: string) => {
-    switch (status) {
+    switch (status?.toUpperCase()) {
       case "SUCCESSFUL":
         return "bg-green-100 text-green-800"
       case "PENDING":
@@ -131,6 +143,12 @@ const TransactionsTab = () => {
       default:
         return "bg-gray-100 text-gray-800"
     }
+  }
+
+  const uniqueValues = {
+    sendAssets: Array.from(new Set(transactions.map(t => t.send_asset))),
+    receiveCurrencies: Array.from(new Set(transactions.map(t => t.receive_currency))),
+    providers: Array.from(new Set(transactions.map(t => t.provider)))
   }
 
   return (
@@ -147,16 +165,33 @@ const TransactionsTab = () => {
             />
           </div>
           <div>
+            <DatePickerWithRange
+              date={filters.dateRange}
+              onDateChange={(range: DateRange | undefined) => setFilters(prev => ({ ...prev, dateRange: range }))}
+            />
+          </div>
+          <div>
             <Select value={filters.status} onValueChange={(value) => handleFilterChange("status", value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="SUCCESSFUL">Successful</SelectItem>
                 <SelectItem value="PENDING">Pending</SelectItem>
                 <SelectItem value="CANCELLED">Cancelled</SelectItem>
                 <SelectItem value="EXPIRED">Expired</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Select value={filters.payInStatus} onValueChange={(value) => handleFilterChange("payInStatus", value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Pay-in Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="SUCCESSFUL">Successful</SelectItem>
+                <SelectItem value="PENDING">Pending</SelectItem>
+                <SelectItem value="FAILED">Failed</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -166,8 +201,7 @@ const TransactionsTab = () => {
                 <SelectValue placeholder="Send Asset" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Assets</SelectItem>
-                {Array.from(new Set(transactions.map(t => t.send_asset))).map(asset => (
+                {uniqueValues.sendAssets.map(asset => (
                   <SelectItem key={asset} value={asset}>{asset}</SelectItem>
                 ))}
               </SelectContent>
@@ -179,9 +213,21 @@ const TransactionsTab = () => {
                 <SelectValue placeholder="Receive Currency" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Currencies</SelectItem>
-                {Array.from(new Set(transactions.map(t => t.receive_currency))).map(currency => (
+                {uniqueValues.receiveCurrencies.map(currency => (
                   <SelectItem key={currency} value={currency}>{currency}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Select value={filters.provider} onValueChange={(value) => handleFilterChange("provider", value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Provider" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Providers</SelectItem>
+                {uniqueValues.providers.map(provider => (
+                  <SelectItem key={provider} value={provider}>{provider}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -194,15 +240,16 @@ const TransactionsTab = () => {
               <TableHead>Date</TableHead>
               <TableHead>Send</TableHead>
               <TableHead>Receive</TableHead>
-              <TableHead>Account</TableHead>
+              <TableHead>Provider</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Pay-in Status</TableHead>
               <TableHead>Fee</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {transactions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                   No transactions found
                 </TableCell>
               </TableRow>
@@ -220,10 +267,15 @@ const TransactionsTab = () => {
                   <TableCell>
                     {transaction.receive_amount.toLocaleString()} {transaction.receive_currency}
                   </TableCell>
-                  <TableCell>{transaction.account_number}</TableCell>
+                  <TableCell>{transaction.provider}</TableCell>
                   <TableCell>
                     <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(transaction.status)}`}>
                       {transaction.status}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(transaction.pay_in_status)}`}>
+                      {transaction.pay_in_status}
                     </span>
                   </TableCell>
                   <TableCell>{transaction.fee}</TableCell>
@@ -233,15 +285,34 @@ const TransactionsTab = () => {
           </TableBody>
         </Table>
 
-        {hasMore && (
-          <div className="flex justify-center mt-4">
-            <button
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={handleLoadMore}
-              disabled={isLoading}
-            >
-              {isLoading ? "Loading..." : "Load More"}
-            </button>
+        {pagination.total_pages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(pagination.current_page - 1)}
+                disabled={!pagination.previous_page}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+              <span className="text-sm text-gray-600">
+                Page {pagination.current_page} of {pagination.total_pages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(pagination.current_page + 1)}
+                disabled={!pagination.next_page}
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="text-sm text-gray-600">
+              Showing {((pagination.current_page - 1) * pagination.items_per_page) + 1} to {Math.min(pagination.current_page * pagination.items_per_page, pagination.total_items)} of {pagination.total_items} entries
+            </div>
           </div>
         )}
 
@@ -277,10 +348,6 @@ const TransactionsTab = () => {
                       </span>
                     </p>
                   </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-500">Account Number</Label>
-                    <p className="mt-1">{selectedTransaction.account_number}</p>
-                  </div>
                 </div>
                 <div className="space-y-4">
                   <div>
@@ -302,6 +369,10 @@ const TransactionsTab = () => {
                   <div>
                     <Label className="text-sm font-medium text-gray-500">Fee</Label>
                     <p className="mt-1">{selectedTransaction.fee}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Provider</Label>
+                    <p className="mt-1">{selectedTransaction.provider}</p>
                   </div>
                   {selectedTransaction.narration && (
                     <div>
