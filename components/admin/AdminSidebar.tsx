@@ -46,6 +46,7 @@ const menuItems = [
       { name: "Add User", path: "/admin/users/add" },
     ],
   },
+  { name: "Roles", icon: UsersIcon, path: "/admin/roles" },
   {
     name: "Reports",
     icon: ChartBarIcon,
@@ -59,6 +60,7 @@ const menuItems = [
           { name: "Fees", path: "/admin/reports/liquidity-rail?tab=fees" },
         ],
       },
+      { name: "Volume", path: "/admin/reports/volume" },
       { name: "Collections", path: "/admin/reports/collections-report" },
       { name: "Payout", path: "/admin/reports/payout-report" },
       { name: "Charges", path: "/admin/reports/charges-report" },
@@ -81,7 +83,10 @@ export default function AdminSidebar() {
     setOpenDropdowns((prev) => (prev.includes(name) ? prev.filter((item) => item !== name) : [...prev, name]))
   }
 
-  const isActive = (path: string) => pathname === path
+  const isActive = (path: string) => {
+    // For exact matches including query parameters
+    return pathname === path
+  }
 
   const renderMenuItem = (item: any) => {
     if (item.submenu) {
