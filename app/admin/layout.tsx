@@ -6,6 +6,7 @@ import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import AdminSidebar from "@/components/admin/AdminSidebar"
 import AdminHeader from "@/components/admin/AdminHeader"
+import { UserProvider } from "@/contexts/UserContext"
 
 export default function AdminLayout({
   children,
@@ -39,13 +40,15 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      <AdminSidebar />
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <AdminHeader />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100">{children}</main>
+    <UserProvider>
+      <div className="flex h-screen bg-gray-100">
+        <AdminSidebar />
+        <div className="flex flex-col flex-1 overflow-hidden">
+          <AdminHeader />
+          <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100">{children}</main>
+        </div>
       </div>
-    </div>
+    </UserProvider>
   )
 }
 
