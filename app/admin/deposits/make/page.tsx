@@ -7,8 +7,15 @@ import { Label } from "@/components/ui/label"
 import toast from "react-hot-toast"
 import ProgressBar from "@/components/ProgressBar"
 import { get, post } from "@/utils/api"
+import { useTwoFactorCheck } from "@/hooks/useTwoFactorCheck"
+
+interface Client {
+  client_id: string
+  business_name: string
+}
 
 export default function MakeDepositPage() {
+  const { checkAndRedirect } = useTwoFactorCheck()
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
     walletId: "",
@@ -17,9 +24,13 @@ export default function MakeDepositPage() {
     depositReference: "",
   })
   const [searchTerm, setSearchTerm] = useState("")
-  const [clients, setClients] = useState([])
-  const [filteredClients, setFilteredClients] = useState([])
+  const [clients, setClients] = useState<Client[]>([])
+  const [filteredClients, setFilteredClients] = useState<Client[]>([])
   const [showDropdown, setShowDropdown] = useState(false)
+
+  useEffect(() => {
+    checkAndRedirect()
+  }, [checkAndRedirect])
 
   useEffect(() => {
     const fetchClients = async () => {
@@ -58,6 +69,11 @@ export default function MakeDepositPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Check 2FA status before submitting
+    const canProceed = await checkAndRedirect()
+    if (!canProceed) return
+
     setIsLoading(true)
 
     try {

@@ -9,6 +9,7 @@ import { get, post } from "@/utils/api"
 import { format } from "date-fns"
 import FeeTwoFactorModal from "@/app/admin/fees/components/FeeTwoFactorModal"
 import { FaCheck, FaTimes } from "react-icons/fa" // Import icons
+import { useTwoFactorCheck } from "@/hooks/useTwoFactorCheck"
 
 interface Deposit {
   trans_id: string;
@@ -19,11 +20,16 @@ interface Deposit {
 }
 
 export default function PendingDepositsPage() {
+  const { checkAndRedirect } = useTwoFactorCheck()
   const [isLoading, setIsLoading] = useState(false);
   const [pendingDeposits, setPendingDeposits] = useState<Deposit[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTransId, setSelectedTransId] = useState<string | null>(null);
   const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
+
+  useEffect(() => {
+    checkAndRedirect()
+  }, [checkAndRedirect])
 
   useEffect(() => {
     const fetchPendingDeposits = async () => {

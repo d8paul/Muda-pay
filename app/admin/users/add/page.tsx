@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -9,9 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import toast from "react-hot-toast"
 import ProgressBar from "@/components/ProgressBar"
 import { post } from "@/utils/api"
+import { useTwoFactorCheck } from "@/hooks/useTwoFactorCheck"
 
 export default function AddUserPage() {
   const router = useRouter()
+  const { checkAndRedirect } = useTwoFactorCheck()
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
     firstName: "",
@@ -19,6 +21,10 @@ export default function AddUserPage() {
     email: "",
     role: "",
   })
+
+  useEffect(() => {
+    checkAndRedirect()
+  }, [checkAndRedirect])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -37,6 +43,10 @@ export default function AddUserPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Check 2FA status before submitting
+    const canProceed = await checkAndRedirect()
+    if (!canProceed) return
 
     setIsLoading(true)
     try {
