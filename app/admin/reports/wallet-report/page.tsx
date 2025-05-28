@@ -89,10 +89,11 @@ const WalletReportPage = () => {
           try {
             const response = await get(`/admin/wallets/${currency.currency.toLowerCase()}`);
             if (response.status === 200) {
-              balances[currency.currency] = response.data;
+              balances[currency.currency] = response.data || [];
             }
           } catch (error) {
             console.error(`Error fetching ${currency.currency} balances:`, error);
+            balances[currency.currency] = [];
           }
         })
       );

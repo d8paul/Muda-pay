@@ -6,8 +6,15 @@ import { get } from "@/utils/api"
 import toast from "react-hot-toast"
 import ProgressBar from "@/components/ProgressBar"
 
+interface Balance {
+  id: number
+  currency: string
+  balance: number
+  asset_code: string
+}
+
 export default function AdminWalletPage() {
-  const [balances, setBalances] = useState([])
+  const [balances, setBalances] = useState<Balance[]>([])
   const [showDepositModal, setShowDepositModal] = useState(false)
   const [selectedCurrency, setSelectedCurrency] = useState({ code: "UGX" })
   const [isLoading, setIsLoading] = useState(true)

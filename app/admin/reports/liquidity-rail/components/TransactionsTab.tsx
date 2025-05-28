@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -23,18 +23,60 @@ import { addDays } from "date-fns"
 interface Transaction {
   id: number
   transId: string
+  company_id: string
   send_asset: string
   send_amount: string
   receive_currency: string
   receive_amount: number
   ex_rate: string
-  account_number: string
-  status: string
+  receiver_address: string
   pay_in_status: string
-  provider: string
+  status: string
+  sending_address: string
+  response_body: string | null
+  reason: string | null
   created_on: string
+  provider_ref_id: string
+  provider_address: string
+  provider_memo: string
   fee: string
   narration: string | null
+  hash: string | null
+  payment_mtd_id: number
+  auto_id: number
+  payment_method: {
+    id: string
+    kotani_customer_key: string
+    type: string
+    currency: string
+    phone_number: string
+    country_code: string
+    network: string
+    account_name: string
+    bank_name: string | null
+    bank_code: string | null
+    account_number: string | null
+    bank_address: string | null
+    bank_phone_number: string | null
+    bank_country: string | null
+    sort_code: string | null
+    swift_code: string | null
+    created_at: string
+    updated_at: string
+  }
+  service_provider: {
+    provider_service_id: number
+    service_id: number
+    provider_id: number
+    min_amount: number
+    max_amount: number
+    service: {
+      service_code: string
+      service_name: string
+      country: string
+      provider_type: string
+    }
+  }
 }
 
 interface Pagination {
@@ -89,16 +131,17 @@ const TransactionsTab = () => {
       const queryParams = new URLSearchParams({
         page: page.toString(),
         limit: pagination.items_per_page.toString(),
-        ...(filters.status && { status: filters.status }),
-        ...(filters.payInStatus && { pay_in_status: filters.payInStatus }),
-        ...(filters.sendAsset && { send_asset: filters.sendAsset }),
-        ...(filters.receiveCurrency && { receive_currency: filters.receiveCurrency }),
-        ...(filters.provider !== 'all' && { provider: filters.provider }),
+        ...(filters.status && filters.status !== "all" && { status: filters.status }),
+        ...(filters.payInStatus && filters.payInStatus !== "all" && { pay_in_status: filters.payInStatus }),
+        ...(filters.sendAsset && filters.sendAsset !== "all" && { send_asset: filters.sendAsset }),
+        ...(filters.receiveCurrency && filters.receiveCurrency !== "all" && { receive_currency: filters.receiveCurrency }),
+        ...(filters.provider !== "all" && { provider: filters.provider }),
         ...(filters.searchTerm && { search: filters.searchTerm }),
-        ...(filters.dateRange && { from_date: filters.dateRange.from?.toISOString(), to_date: filters.dateRange.to?.toISOString() })
+        ...(filters.dateRange && { start_date: filters.dateRange.from?.toISOString(), end_date: filters.dateRange.to?.toISOString() })
       })
 
       const response = await get(`/admin/reports/rails/transactions?${queryParams.toString()}`)
+      console.log("Response: ", response.data)
       const data = response.data as TransactionResponse
       
       setTransactions(data.items)
@@ -126,6 +169,19 @@ const TransactionsTab = () => {
     fetchTransactions(page)
   }
 
+  const handleResetFilters = () => {
+    setFilters({
+      searchTerm: "",
+      status: "all",
+      payInStatus: "all",
+      sendAsset: "all",
+      receiveCurrency: "all",
+      provider: "all",
+      dateRange: undefined
+    })
+    setPagination(prev => ({ ...prev, current_page: 1 }))
+  }
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString()
   }
@@ -148,7 +204,7 @@ const TransactionsTab = () => {
   const uniqueValues = {
     sendAssets: Array.from(new Set(transactions.map(t => t.send_asset))),
     receiveCurrencies: Array.from(new Set(transactions.map(t => t.receive_currency))),
-    providers: Array.from(new Set(transactions.map(t => t.provider)))
+    providers: Array.from(new Set(transactions.map(t => t.service_provider.service.service_name)))
   }
 
   return (
@@ -176,6 +232,7 @@ const TransactionsTab = () => {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="SUCCESSFUL">Successful</SelectItem>
                 <SelectItem value="PENDING">Pending</SelectItem>
                 <SelectItem value="CANCELLED">Cancelled</SelectItem>
@@ -189,6 +246,7 @@ const TransactionsTab = () => {
                 <SelectValue placeholder="Pay-in Status" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">All Pay-in Status</SelectItem>
                 <SelectItem value="SUCCESSFUL">Successful</SelectItem>
                 <SelectItem value="PENDING">Pending</SelectItem>
                 <SelectItem value="FAILED">Failed</SelectItem>
@@ -201,6 +259,7 @@ const TransactionsTab = () => {
                 <SelectValue placeholder="Send Asset" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">All Assets</SelectItem>
                 {uniqueValues.sendAssets.map(asset => (
                   <SelectItem key={asset} value={asset}>{asset}</SelectItem>
                 ))}
@@ -213,13 +272,14 @@ const TransactionsTab = () => {
                 <SelectValue placeholder="Receive Currency" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">All Currencies</SelectItem>
                 {uniqueValues.receiveCurrencies.map(currency => (
                   <SelectItem key={currency} value={currency}>{currency}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          <div>
+          {/* <div>
             <Select value={filters.provider} onValueChange={(value) => handleFilterChange("provider", value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Provider" />
@@ -231,16 +291,18 @@ const TransactionsTab = () => {
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </div> */}
         </div>
 
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Date</TableHead>
+              <TableHead>Transaction ID</TableHead>
               <TableHead>Send</TableHead>
               <TableHead>Receive</TableHead>
               <TableHead>Provider</TableHead>
+              <TableHead>Network</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Pay-in Status</TableHead>
               <TableHead>Fee</TableHead>
@@ -249,7 +311,7 @@ const TransactionsTab = () => {
           <TableBody>
             {transactions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={9} className="text-center py-8 text-gray-500">
                   No transactions found
                 </TableCell>
               </TableRow>
@@ -261,13 +323,15 @@ const TransactionsTab = () => {
                   onClick={() => setSelectedTransaction(transaction)}
                 >
                   <TableCell>{formatDate(transaction.created_on)}</TableCell>
+                  <TableCell className="font-mono text-sm">{transaction.transId}</TableCell>
                   <TableCell>
                     {transaction.send_amount} {transaction.send_asset}
                   </TableCell>
                   <TableCell>
                     {transaction.receive_amount.toLocaleString()} {transaction.receive_currency}
                   </TableCell>
-                  <TableCell>{transaction.provider}</TableCell>
+                  <TableCell>{transaction.service_provider.service.service_name}</TableCell>
+                  <TableCell>{transaction.payment_method.network}</TableCell>
                   <TableCell>
                     <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(transaction.status)}`}>
                       {transaction.status}
@@ -326,7 +390,7 @@ const TransactionsTab = () => {
                 <div className="space-y-4">
                   <div>
                     <Label className="text-sm font-medium text-gray-500">Transaction ID</Label>
-                    <p className="mt-1">{selectedTransaction.transId}</p>
+                    <p className="mt-1 font-mono text-sm">{selectedTransaction.transId}</p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-500">Date</Label>
@@ -347,6 +411,14 @@ const TransactionsTab = () => {
                         {selectedTransaction.pay_in_status}
                       </span>
                     </p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Provider</Label>
+                    <p className="mt-1">{selectedTransaction.service_provider.service.service_name}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Network</Label>
+                    <p className="mt-1">{selectedTransaction.payment_method.network}</p>
                   </div>
                 </div>
                 <div className="space-y-4">
@@ -371,8 +443,12 @@ const TransactionsTab = () => {
                     <p className="mt-1">{selectedTransaction.fee}</p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Provider</Label>
-                    <p className="mt-1">{selectedTransaction.provider}</p>
+                    <Label className="text-sm font-medium text-gray-500">Account Name</Label>
+                    <p className="mt-1">{selectedTransaction.payment_method.account_name}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Phone Number</Label>
+                    <p className="mt-1">{selectedTransaction.payment_method.phone_number}</p>
                   </div>
                   {selectedTransaction.narration && (
                     <div>
