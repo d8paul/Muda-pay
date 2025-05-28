@@ -13,6 +13,7 @@ interface UserProfile {
   deleted_at: string | null
   updated_at: string
   created_at: string
+  two_factor_enabled: boolean
 }
 
 interface UserContextType {
@@ -20,6 +21,7 @@ interface UserContextType {
   loading: boolean
   error: string | null
   fetchUserProfile: () => Promise<void>
+  checkTwoFactorStatus: () => Promise<boolean>
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined)
@@ -46,6 +48,20 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const checkTwoFactorStatus = async (): Promise<boolean> => {
+    try {
+      const response = await get("/admin/users/2fa/status")
+      console.log("2FA status response:", response)
+      if (response.status === 201) {
+        return response.data.status === "active"
+      }
+      return false
+    } catch (err) {
+      console.error("Error checking 2FA status:", err)
+      return false
+    }
+  }
+
   useEffect(() => {
     const token = localStorage.getItem("token")
     if (token) {
@@ -56,7 +72,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <UserContext.Provider value={{ user, loading, error, fetchUserProfile }}>
+    <UserContext.Provider value={{ user, loading, error, fetchUserProfile, checkTwoFactorStatus }}>
       {children}
     </UserContext.Provider>
   )

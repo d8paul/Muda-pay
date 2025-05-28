@@ -12,9 +12,11 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTwoFactorCheck } from "@/hooks/useTwoFactorCheck";
 
 export default function TransactionFeesPage() {
   const router = useRouter();
+  const { checkAndRedirect } = useTwoFactorCheck();
   const [isLoading, setIsLoading] = useState(false);
   const [fees, setFees] = useState<TransactionFee[]>([]);
   const [editingFee, setEditingFee] = useState<TransactionFee | null>(null);
@@ -126,6 +128,16 @@ export default function TransactionFeesPage() {
     setActiveTab("view-fees");
   };
 
+  const handleTabChange = async (value: string) => {
+    if (value === "create-fee") {
+      const canProceed = await checkAndRedirect();
+      if (!canProceed) {
+        return;
+      }
+    }
+    setActiveTab(value);
+  };
+
   return (
     <>
       <ProgressBar isLoading={isLoading} />
@@ -144,7 +156,7 @@ export default function TransactionFeesPage() {
         </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
           <div className="py-4">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
               <TabsList className="mb-6">
                 <TabsTrigger value="view-fees">View Fees</TabsTrigger>
                 <TabsTrigger value="create-fee">Create Fee</TabsTrigger>
