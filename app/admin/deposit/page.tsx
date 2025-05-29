@@ -6,31 +6,70 @@ import { useState } from "react"
 import { post } from "@/utils/api"
 import toast from "react-hot-toast"
 import ProgressBar from "@/components/ProgressBar"
+import TwoFactorAuthDialog from "@/components/TwoFactorAuthDialog"
+import { useTwoFactorAuth } from "@/hooks/useTwoFactorAuth"
 
 export default function AdminDepositPage() {
   const [clientId, setClientId] = useState("")
   const [amount, setAmount] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-
-  const handleDeposit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    try {
-      await post("/admin/deposit", { clientId, amount: Number.parseFloat(amount) })
+  const [localLoading, setLocalLoading] = useState(false)
+  
+  const { 
+    show2FAModal, 
+    setShow2FAModal,
+    isLoading: twoFALoading, 
+    requireTwoFactorAuth,
+    handle2FASubmit 
+  } = useTwoFactorAuth({
+    onSuccess: () => {
       toast.success("Deposit successful")
       setClientId("")
       setAmount("")
+    }
+  })
+
+  const isLoading = localLoading || twoFALoading
+
+  const handleDeposit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!clientId || !amount) {
+      toast.error("Client ID and amount are required")
+      return
+    }
+    
+    const depositData = {
+      clientId,
+      amount: Number.parseFloat(amount)
+    }
+    
+    await requireTwoFactorAuth(depositData, submitDeposit)
+  }
+
+  const submitDeposit = async (data: { clientId: string, amount: number }, token?: string) => {
+    setLocalLoading(true)
+    try {
+      // If token is provided, include it in the request
+      const payload = token ? { ...data, token } : data
+      await post("/admin/deposit", payload)
     } catch (error) {
       console.error("Deposit failed:", error)
       toast.error("Deposit failed")
+      throw error
     } finally {
-      setIsLoading(false)
+      setLocalLoading(false)
     }
   }
 
   return (
     <>
       <ProgressBar isLoading={isLoading} />
+      <TwoFactorAuthDialog
+        open={show2FAModal}
+        onOpenChange={setShow2FAModal}
+        onSubmit={handle2FASubmit}
+        isLoading={twoFALoading}
+      />
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
           <h1 className="text-2xl font-semibold text-gray-900">Deposit</h1>
@@ -85,6 +124,8 @@ export default function AdminDepositPage() {
           </div>
         </div>
       </div>
+
+      
     </>
   )
 }
