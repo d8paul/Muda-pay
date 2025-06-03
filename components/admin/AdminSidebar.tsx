@@ -13,6 +13,7 @@ import {
   ChevronDownIcon,
   ChartBarIcon,
   DocumentCurrencyDollarIcon,
+  CurrencyDollarIcon,
 } from "@heroicons/react/24/outline"
 
 import BavaPayLogo from "../BavaPayLogo"
@@ -35,7 +36,6 @@ const menuItems = [
     submenu: [
       { name: "Business List", path: "/admin/business/businesslist" },
       { name: "Add Business", path: "/admin/business/addbusiness" },
-      
     ],
   },
   {
@@ -47,6 +47,7 @@ const menuItems = [
     ],
   },
   { name: "Roles", icon: UsersIcon, path: "/admin/roles" },
+  { name: "Rates", icon: CurrencyDollarIcon, path: "/admin/rates" },
   {
     name: "Reports",
     icon: ChartBarIcon,
