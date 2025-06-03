@@ -35,7 +35,7 @@ const menuItems = [
     submenu: [
       { name: "Business List", path: "/admin/business/businesslist" },
       { name: "Add Business", path: "/admin/business/addbusiness" },
-      
+      { name: "Fee Products", path: "/admin/fees/products" },
     ],
   },
   {

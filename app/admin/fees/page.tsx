@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTwoFactorCheck } from "@/hooks/useTwoFactorCheck";
+import FeeProducts from "./components/FeeProducts";
 
 export default function TransactionFeesPage() {
   const router = useRouter();
@@ -160,6 +161,7 @@ export default function TransactionFeesPage() {
               <TabsList className="mb-6">
                 <TabsTrigger value="view-fees">View Fees</TabsTrigger>
                 <TabsTrigger value="create-fee">Create Fee</TabsTrigger>
+                <TabsTrigger value="fee-products">Fee Products</TabsTrigger>
                 {editingFee && <TabsTrigger value="edit-fee">Edit Fee</TabsTrigger>}
               </TabsList>
               
@@ -183,6 +185,10 @@ export default function TransactionFeesPage() {
                   onCancel={handleCancelEdit}
                   isLoading={isLoading}
                 />
+              </TabsContent>
+
+              <TabsContent value="fee-products">
+                <FeeProducts />
               </TabsContent>
               
               <TabsContent value="edit-fee">

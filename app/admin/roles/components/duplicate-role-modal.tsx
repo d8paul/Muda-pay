@@ -1,7 +1,5 @@
-"use client"
-
 import { useState, useEffect } from "react"
-import { get, put } from "@/utils/api"
+import { post, get } from "@/utils/api"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -40,20 +38,20 @@ interface Role {
   deleted_at: string | null
 }
 
-interface EditRoleModalProps {
+interface DuplicateRoleModalProps {
   open: boolean
   onClose: () => void
   onSuccess: () => void
   role: Role
 }
 
-export default function EditRoleModal({ open, onClose, onSuccess, role }: EditRoleModalProps) {
-  const [name, setName] = useState(role.name)
+export default function DuplicateRoleModal({ open, onClose, onSuccess, role }: DuplicateRoleModalProps) {
+  const [name, setName] = useState(`${role.name} (Copy)`)
   const [details, setDetails] = useState(role.details)
-  const [status, setStatus] = useState<"active" | "inactive">(role.status)
+  const [status, setStatus] = useState<"active" | "inactive">("active")
+  const [isLoading, setIsLoading] = useState(false)
   const [accessRights, setAccessRights] = useState<AccessRight[]>([])
   const [selectedRights, setSelectedRights] = useState<string[]>(role.access_rights.map(ar => ar.role_access_rights_id) || [])
-  const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
     if (open) {
@@ -71,28 +69,6 @@ export default function EditRoleModal({ open, onClose, onSuccess, role }: EditRo
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-
-    try {
-      await put(`/admin/roles/${role.id}`, {
-        name,
-        details,
-        status,
-        access_rights: selectedRights.map(id => ({ role_access_rights_id: id })),
-      })
-
-      toast.success("Role updated successfully")
-      onSuccess()
-    } catch (error) {
-      console.error("Error updating role:", error)
-      toast.error("Failed to update role")
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
   const handleRightToggle = (rightId: string) => {
     setSelectedRights((prev) =>
       prev.includes(rightId)
@@ -101,13 +77,35 @@ export default function EditRoleModal({ open, onClose, onSuccess, role }: EditRo
     )
   }
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+
+    try {
+      await post("/admin/roles", {
+        name,
+        details,
+        status,
+        access_rights: selectedRights.map(id => ({ role_access_rights_id: id })),
+      })
+
+      toast.success("Role duplicated successfully")
+      onSuccess()
+    } catch (error) {
+      console.error("Error duplicating role:", error)
+      toast.error("Failed to duplicate role")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <>
       <ProgressBar isLoading={isLoading} />
       <Dialog open={open} onOpenChange={onClose}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Edit Role</DialogTitle>
+            <DialogTitle>Duplicate Role</DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -175,7 +173,7 @@ export default function EditRoleModal({ open, onClose, onSuccess, role }: EditRo
                 Cancel
               </Button>
               <Button type="submit" disabled={isLoading}>
-                {isLoading ? "Updating..." : "Update Role"}
+                {isLoading ? "Duplicating..." : "Duplicate Role"}
               </Button>
             </div>
           </form>
