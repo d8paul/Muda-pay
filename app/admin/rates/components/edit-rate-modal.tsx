@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { put } from "@/utils/api"
+import { put, get } from "@/utils/api"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -28,6 +28,11 @@ interface Rate {
   markdown: number
 }
 
+interface CurrencyOption {
+  asset_code: string
+  currency: string
+}
+
 interface EditRateModalProps {
   open: boolean
   onClose: () => void
@@ -44,7 +49,24 @@ export default function EditRateModal({ open, onClose, onSuccess, rate }: EditRa
   const [markup, setMarkup] = useState("0")
   const [markdown, setMarkdown] = useState("0")
   const [isLoading, setIsLoading] = useState(false)
+  const [currencyOptions, setCurrencies] = useState<CurrencyOption[]>([])
 
+
+  
+  useEffect(() => {
+    const fetchCurrencies = async () => {
+      try {
+        const response = await get("/clients/currencies")       
+        setCurrencies(response.data)
+      } catch (error) {
+        console.error("Error fetching currencies:", error)
+        toast.error("Failed to fetch currencies")
+      }
+    }
+    fetchCurrencies()
+  }, [])
+
+  
   useEffect(() => {
     if (rate) {
       setStatus(rate.status)
@@ -64,7 +86,7 @@ export default function EditRateModal({ open, onClose, onSuccess, rate }: EditRa
     setIsLoading(true)
 
     try {
-      await put(`/admin/rates/${rate.id}`, {
+      await put(`/admin/pair/prices/${rate.id}`, {
         status,
         base_currency: baseCurrency,
         quote_currency: quoteCurrency,
@@ -78,7 +100,6 @@ export default function EditRateModal({ open, onClose, onSuccess, rate }: EditRa
       onSuccess()
     } catch (error) {
       console.error("Error updating rate:", error)
-      toast.error("Failed to update rate")
     } finally {
       setIsLoading(false)
     }
@@ -96,33 +117,13 @@ export default function EditRateModal({ open, onClose, onSuccess, rate }: EditRa
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="baseCurrency">Base Currency</Label>
-                <Select value={baseCurrency} onValueChange={setBaseCurrency} required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select base currency" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="UGX">UGX</SelectItem>
-                    <SelectItem value="KES">KES</SelectItem>
-                    <SelectItem value="TZS">TZS</SelectItem>
-                    <SelectItem value="USD">USD</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="baseCurrency">Base Currency </Label>
+                <p>{baseCurrency}</p>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="quoteCurrency">Quote Currency</Label>
-                <Select value={quoteCurrency} onValueChange={setQuoteCurrency} required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select quote currency" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="USDT">USDT</SelectItem>
-                    <SelectItem value="USD">USD</SelectItem>
-                    <SelectItem value="EUR">EUR</SelectItem>
-                    <SelectItem value="GBP">GBP</SelectItem>
-                  </SelectContent>
-                </Select>
+                <p>{quoteCurrency}</p>
               </div>
             </div>
 
@@ -135,8 +136,8 @@ export default function EditRateModal({ open, onClose, onSuccess, rate }: EditRa
               <Label htmlFor="hasCrypto">Has Crypto</Label>
             </div>
 
-            {hasCrypto && (
-              <div className="space-y-2">
+            
+            <div className="space-y-2">
                 <Label htmlFor="referencePrice">Reference Price</Label>
                 <Input
                   id="referencePrice"
@@ -147,9 +148,7 @@ export default function EditRateModal({ open, onClose, onSuccess, rate }: EditRa
                   onChange={(e) => setReferencePrice(e.target.value)}
                   placeholder="Enter reference price"
                 />
-              </div>
-            )}
-
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="markup">Markup (%)</Label>

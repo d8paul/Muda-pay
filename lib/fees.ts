@@ -86,6 +86,15 @@ export const initializeFeesStorage = () => {
 // Simulate API delay
 const simulateDelay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+export interface FeeProduct {
+  product_id: string;
+  name: string;
+  description: string;
+  status: "active" | "inactive";
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Simulate API calls
 export const feesApi = {
   // Get all fees with optional filtering
@@ -182,5 +191,71 @@ export const feesApi = {
     
     localStorage.setItem("transactionFees", JSON.stringify(filteredFees));
     return true;
-  }
+  },
+
+  // Get all fee products
+  getAllProducts: async (): Promise<FeeProduct[]> => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_PAYMENT_API}/admin/fees/products`, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch fee products');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching fee products:', error);
+      throw error;
+    }
+  },
+
+  // Get fee product by ID
+  getProductById: async (productId: string): Promise<FeeProduct> => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_PAYMENT_API}/admin/fees/products/${productId}`, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch fee product');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching fee product:', error);
+      throw error;
+    }
+  },
+
+  // Update fee product
+  updateProduct: async (productData: {
+    product_id: string;
+    name: string;
+    description: string;
+  }): Promise<FeeProduct> => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_PAYMENT_API}/admin/fees/products`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(productData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update fee product');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error updating fee product:', error);
+      throw error;
+    }
+  },
 };

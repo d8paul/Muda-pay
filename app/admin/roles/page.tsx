@@ -20,22 +20,33 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Plus, Pencil, Trash2, Search, X } from "lucide-react"
+import { Plus, Pencil, Trash2, Search, X, Eye, ChevronUp, ChevronDown, Copy } from "lucide-react"
 import toast from "react-hot-toast"
 import ProgressBar from "@/components/ProgressBar"
 import AddRoleModal from "./components/add-role-modal"
 import EditRoleModal from "./components/edit-role-modal"
 import DeleteRoleModal from "./components/delete-role-modal"
+import ViewRoleModal from "./components/view-role-modal"
+import DuplicateRoleModal from "./components/duplicate-role-modal"
 
 interface Role {
-  id: number
+  id: string
   name: string
   details: string
   status: "active" | "inactive"
-  access_right: string[]
+  access_rights: {
+    role_access_rights_id: string
+    role_id: string
+    name: string
+    access_rights_status: string
+  }[]
   created_at: string
-  updated_at: string
+  updated_at: string | null
+  deleted_at: string | null
 }
+
+type SortField = "name" | "status" | "created_at"
+type SortOrder = "asc" | "desc"
 
 export default function RolesPage() {
   const [roles, setRoles] = useState<Role[]>([])
@@ -44,6 +55,8 @@ export default function RolesPage() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showViewModal, setShowViewModal] = useState(false)
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false)
   const [selectedRole, setSelectedRole] = useState<Role | null>(null)
   
   // Filter states
@@ -51,13 +64,33 @@ export default function RolesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [rightsFilter, setRightsFilter] = useState<string>("all")
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
+  const [totalItems, setTotalItems] = useState(0)
+
+  // Sorting states
+  const [sortField, setSortField] = useState<SortField>("created_at")
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc")
+
   const fetchRoles = async () => {
     try {
       setIsLoading(true)
-      const response = await get("/admin/roles")
+      const response = await get("/admin/roles", {
+        params: {
+          page: currentPage,
+          limit: itemsPerPage,
+          sort_by: sortField,
+          sort_order: sortOrder,
+          name: nameFilter || undefined,
+          status: statusFilter !== "all" ? statusFilter : undefined,
+          access_right: rightsFilter !== "all" ? rightsFilter : undefined,
+        },
+      })
       if (response && Array.isArray(response.data)) {
         setRoles(response.data)
         setFilteredRoles(response.data)
+        setTotalItems(response.total || response.data.length)
       } else {
         console.error("Invalid response format:", response)
         toast.error("Invalid response format from server")
@@ -76,30 +109,27 @@ export default function RolesPage() {
 
   useEffect(() => {
     fetchRoles()
-  }, [])
+  }, [currentPage, itemsPerPage, sortField, sortOrder])
 
   useEffect(() => {
-    let filtered = [...roles]
+    // Reset to first page when filters change
+    setCurrentPage(1)
+    fetchRoles()
+  }, [nameFilter, statusFilter, rightsFilter])
 
-    // Apply name filter
-    if (nameFilter) {
-      filtered = filtered.filter((role) =>
-        role.name.toLowerCase().includes(nameFilter.toLowerCase())
-      )
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc")
+    } else {
+      setSortField(field)
+      setSortOrder("asc")
     }
+  }
 
-    // Apply status filter
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((role) => role.status === statusFilter)
-    }
-
-    // Apply rights filter
-    if (rightsFilter !== "all") {
-      filtered = filtered.filter((role) => role.access_right.includes(rightsFilter))
-    }
-
-    setFilteredRoles(filtered)
-  }, [roles, nameFilter, statusFilter, rightsFilter])
+  const handleView = (role: Role) => {
+    setSelectedRole(role)
+    setShowViewModal(true)
+  }
 
   const handleEdit = (role: Role) => {
     setSelectedRole(role)
@@ -111,10 +141,26 @@ export default function RolesPage() {
     setShowDeleteModal(true)
   }
 
+  const handleDuplicate = (role: Role) => {
+    setSelectedRole(role)
+    setShowDuplicateModal(true)
+  }
+
   const clearFilters = () => {
     setNameFilter("")
     setStatusFilter("all")
     setRightsFilter("all")
+  }
+
+  const totalPages = Math.ceil(totalItems / itemsPerPage)
+
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) return null
+    return sortOrder === "asc" ? (
+      <ChevronUp className="h-4 w-4 ml-1" />
+    ) : (
+      <ChevronDown className="h-4 w-4 ml-1" />
+    )
   }
 
   return (
@@ -166,7 +212,6 @@ export default function RolesPage() {
                     <SelectItem value="1">Admin Access</SelectItem>
                     <SelectItem value="2">User Management</SelectItem>
                     <SelectItem value="3">Role Management</SelectItem>
-                    {/* Add more access rights as needed */}
                   </SelectContent>
                 </Select>
               </div>
@@ -189,11 +234,35 @@ export default function RolesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
+                    <TableHead>
+                      <button
+                        className="flex items-center"
+                        onClick={() => handleSort("name")}
+                      >
+                        Name
+                        <SortIcon field="name" />
+                      </button>
+                    </TableHead>
                     <TableHead>Details</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>
+                      <button
+                        className="flex items-center"
+                        onClick={() => handleSort("status")}
+                      >
+                        Status
+                        <SortIcon field="status" />
+                      </button>
+                    </TableHead>
                     <TableHead>Access Rights</TableHead>
-                    <TableHead>Created At</TableHead>
+                    <TableHead>
+                      <button
+                        className="flex items-center"
+                        onClick={() => handleSort("created_at")}
+                      >
+                        Created At
+                        <SortIcon field="created_at" />
+                      </button>
+                    </TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -213,12 +282,26 @@ export default function RolesPage() {
                           {role.status}
                         </span>
                       </TableCell>
-                      <TableCell>{role.access_right?.length || 0} rights</TableCell>
+                      <TableCell>{role.access_rights?.length || 0} rights</TableCell>
                       <TableCell>
                         {new Date(role.created_at).toLocaleDateString()}
                       </TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleView(role)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDuplicate(role)}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
                           <Button
                             variant="outline"
                             size="sm"
@@ -247,6 +330,48 @@ export default function RolesPage() {
                   )}
                 </TableBody>
               </Table>
+
+              {/* Pagination */}
+              <div className="flex items-center justify-between px-4 py-3 border-t">
+                <div className="flex items-center">
+                  <span className="text-sm text-gray-700">
+                    Showing {((currentPage - 1) * itemsPerPage) + 1} to{" "}
+                    {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} results
+                  </span>
+                  <Select
+                    value={itemsPerPage.toString()}
+                    onValueChange={(value) => setItemsPerPage(Number(value))}
+                  >
+                    <SelectTrigger className="w-20 ml-2">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="20">20</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
             </Card>
           </div>
         </div>
@@ -263,6 +388,29 @@ export default function RolesPage() {
 
       {selectedRole && (
         <>
+          <ViewRoleModal
+            open={showViewModal}
+            onClose={() => {
+              setShowViewModal(false)
+              setSelectedRole(null)
+            }}
+            roleId={selectedRole.id}
+          />
+
+          <DuplicateRoleModal
+            open={showDuplicateModal}
+            onClose={() => {
+              setShowDuplicateModal(false)
+              setSelectedRole(null)
+            }}
+            role={selectedRole}
+            onSuccess={() => {
+              setShowDuplicateModal(false)
+              setSelectedRole(null)
+              fetchRoles()
+            }}
+          />
+
           <EditRoleModal
             open={showEditModal}
             onClose={() => {

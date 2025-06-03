@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { post } from "@/utils/api"
+import { useEffect, useState } from "react"
+import { get, post } from "@/utils/api"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -32,35 +32,66 @@ export default function AddRateModal({ open, onClose, onSuccess }: AddRateModalP
   const [markup, setMarkup] = useState("0")
   const [markdown, setMarkdown] = useState("0")
   const [isLoading, setIsLoading] = useState(false)
+  const [currencyOptions, setCurrencies] = useState<string[]>([])
+
+  useEffect(() => {
+    const fetchCurrencies = async () => {
+      try {
+        const response = await get("/clients/currencies")       
+        setCurrencies(response.data)
+      } catch (error) {
+        console.error("Error fetching currencies:", error)
+        toast.error("Failed to fetch currencies")
+      }
+    }
+    fetchCurrencies()
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
+    // Validation: both currencies must be selected
+    if (!baseCurrency || baseCurrency === "") {
+      toast.error("Base currency is required.")
+      setIsLoading(false)
+      return
+    }
+
+    if (!quoteCurrency || quoteCurrency === "") {
+        toast.error("Quote currency is required.")
+        setIsLoading(false)
+        return
+    }
+
     try {
-      await post("/admin/rates", {
-        status,
+      
+
+
+      await post("/admin/pair/prices", {
         base_currency: baseCurrency,
         quote_currency: quoteCurrency,
-        hasCrypto,
-        referencePrice: referencePrice || null,
+        hasCrypto: hasCrypto,
+        referencePrice: referencePrice || "",
         markup: parseFloat(markup) || 0,
         markdown: parseFloat(markdown) || 0,
+        status: status
       })
-
-      toast.success("Rate created successfully")
+      toast.success("Pair Price Rate created successfully")
       onSuccess()
+      
+      
       // Reset form
       setStatus("active")
-      setBaseCurrency("UGX")
-      setQuoteCurrency("USDT")
+      setBaseCurrency("")
+      setQuoteCurrency("")
       setHasCrypto(false)
       setReferencePrice("")
       setMarkup("0")
       setMarkdown("0")
     } catch (error) {
       console.error("Error creating rate:", error)
-      toast.error("Failed to create rate")
+      // toast.error("Failed to create rate")
     } finally {
       setIsLoading(false)
     }
@@ -79,30 +110,32 @@ export default function AddRateModal({ open, onClose, onSuccess }: AddRateModalP
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="baseCurrency">Base Currency</Label>
-                <Select value={baseCurrency} onValueChange={setBaseCurrency} required>
+                <Select value={baseCurrency} onValueChange={setBaseCurrency}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select base currency" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="UGX">UGX</SelectItem>
-                    <SelectItem value="KES">KES</SelectItem>
-                    <SelectItem value="TZS">TZS</SelectItem>
-                    <SelectItem value="USD">USD</SelectItem>
+                    {currencyOptions.map(opt => (
+                      <SelectItem key={opt.asset_code} value={opt.asset_code}>
+                        {opt.asset_code} ({opt.currency})
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="quoteCurrency">Quote Currency</Label>
-                <Select value={quoteCurrency} onValueChange={setQuoteCurrency} required>
+                <Select value={quoteCurrency} onValueChange={setQuoteCurrency}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select quote currency" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="USDT">USDT</SelectItem>
-                    <SelectItem value="USD">USD</SelectItem>
-                    <SelectItem value="EUR">EUR</SelectItem>
-                    <SelectItem value="GBP">GBP</SelectItem>
+                    {currencyOptions.map(opt => (
+                      <SelectItem key={opt.asset_code} value={opt.asset_code}>
+                        {opt.asset_code}({opt.currency})
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -117,8 +150,7 @@ export default function AddRateModal({ open, onClose, onSuccess }: AddRateModalP
               <Label htmlFor="hasCrypto">Has Crypto</Label>
             </div>
 
-            {hasCrypto && (
-              <div className="space-y-2">
+            <div className="space-y-2">
                 <Label htmlFor="referencePrice">Reference Price</Label>
                 <Input
                   id="referencePrice"
@@ -129,8 +161,7 @@ export default function AddRateModal({ open, onClose, onSuccess }: AddRateModalP
                   onChange={(e) => setReferencePrice(e.target.value)}
                   placeholder="Enter reference price"
                 />
-              </div>
-            )}
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">

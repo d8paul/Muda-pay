@@ -8,8 +8,19 @@ import toast from "react-hot-toast"
 import ProgressBar from "@/components/ProgressBar"
 
 interface Role {
-  id: number
+  id: string
   name: string
+  details: string
+  status: "active" | "inactive"
+  access_rights: {
+    role_access_rights_id: string
+    role_id: string
+    name: string
+    access_rights_status: string
+  }[]
+  created_at: string
+  updated_at: string | null
+  deleted_at: string | null
 }
 
 interface DeleteRoleModalProps {

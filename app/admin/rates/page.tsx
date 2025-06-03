@@ -27,45 +27,6 @@ import AddRateModal from "./components/add-rate-modal"
 import EditRateModal from "./components/edit-rate-modal"
 import DeleteRateModal from "./components/delete-rate-modal"
 
-/**
- * Example rate data:
- * {
- *   "id": "rate_123",
- *   "status": "active",
- *   "base_currency": "UGX",
- *   "quote_currency": "USDT",
- *   "hasCrypto": true,
- *   "referencePrice": "3800.50",
- *   "markup": 2.5,
- *   "markdown": 0.5
- * }
- * 
- * Example response from API:
- * {
- *   "data": [
- *     {
- *       "id": "rate_123",
- *       "status": "active",
- *       "base_currency": "UGX",
- *       "quote_currency": "USDT",
- *       "hasCrypto": true,
- *       "referencePrice": "3800.50",
- *       "markup": 2.5,
- *       "markdown": 0.5
- *     },
- *     {
- *       "id": "rate_124",
- *       "status": "active",
- *       "base_currency": "KES",
- *       "quote_currency": "USDT",
- *       "hasCrypto": true,
- *       "referencePrice": "130.25",
- *       "markup": 1.8,
- *       "markdown": 0.3
- *     }
- *   ]
- * }
- */
 
 interface Rate {
   id: string
@@ -76,22 +37,29 @@ interface Rate {
   referencePrice: string | null
   markup: number
   markdown: number
+  current_exchange_rate: number
+}
+
+interface CurrencyOption {
+  asset_code: string
+  currency: string
 }
 
 export default function RatesPage() {
   const [rates, setRates] = useState<Rate[]>([
-    {
-      id: "rate_123",
-      status: "active",
-      base_currency: "UGX",
-      quote_currency: "USDT",
-      hasCrypto: true,
-      referencePrice: "3800.50",
-      markup: 2.5,
-      markdown: 0.5
-    }
+    // {
+    //   id: "rate_123",
+    //   status: "active",
+    //   base_currency: "UGX",
+    //   quote_currency: "USDT",
+    //   hasCrypto: true,
+    //   referencePrice: "3800.50",
+    //   markup: 2.5,
+    //   markdown: 0.5
+    // }
   ])
   const [filteredRates, setFilteredRates] = useState<Rate[]>([])
+  const [currencyOptions, setCurrencyOptions] = useState<CurrencyOption[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -101,6 +69,7 @@ export default function RatesPage() {
   // Filter states
   const [nameFilter, setNameFilter] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [currencyFilter, setCurrencyFilter] = useState<string>("all")
 
   const fetchRates = async () => {
     try {
@@ -147,6 +116,19 @@ export default function RatesPage() {
 
     setFilteredRates(filtered)
   }, [rates, nameFilter, statusFilter])
+
+  useEffect(() => {
+    const fetchCurrencies = async () => {
+      try {
+        const response = await get("/clients/currencies")
+        setCurrencyOptions(response.data)
+      } catch (error) {
+        console.error("Error fetching currencies:", error)
+        toast.error("Failed to fetch currencies")
+      }
+    }
+    fetchCurrencies()
+  }, [])
 
   const handleEdit = (rate: Rate) => {
     setSelectedRate(rate)
@@ -195,6 +177,8 @@ export default function RatesPage() {
           <div className="py-4">
             <Card className="p-4 mb-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
@@ -204,14 +188,18 @@ export default function RatesPage() {
                     className="pl-10"
                   />
                 </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
+
+
+                <Select value={currencyFilter} onValueChange={setCurrencyFilter}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Filter by status" />
+                    <SelectValue placeholder="Filter by currency" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
+                     {currencyOptions.map(opt => (
+                      <SelectItem key={opt.asset_code} value={opt.asset_code}>
+                        {opt.asset_code} ({opt.currency})
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -234,11 +222,11 @@ export default function RatesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Currency Pair</TableHead>
                     <TableHead>Exchange Rate</TableHead>
-                    <TableHead>Markup (%)</TableHead>
-                    <TableHead>Markdown (%)</TableHead>
-                    <TableHead>Status</TableHead>
+                        <TableHead>Markup (%)</TableHead>
+                        <TableHead>Markdown (%)</TableHead>
+                        <TableHead>Buy Price</TableHead>
+                        <TableHead>Sell Price</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -246,24 +234,15 @@ export default function RatesPage() {
                   {filteredRates.map((rate) => (
                     <TableRow key={rate.id}>
                       <TableCell>
-                        {rate.base_currency}/{rate.quote_currency}
-                        {rate.hasCrypto && (
-                          <span className="ml-2 text-xs text-blue-600">(Crypto)</span>
-                        )}
+                       {rate.base_currency} 
                       </TableCell>
-                      <TableCell>{calculateExchangeRate(rate)}</TableCell>
                       <TableCell>{rate.markup}%</TableCell>
                       <TableCell>{rate.markdown}%</TableCell>
                       <TableCell>
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            rate.status === "active"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {rate.status}
-                        </span>
+                        {(Number(rate.current_exchange_rate) + (Number(rate.current_exchange_rate) * Number(rate.markup) / 100)).toFixed(2)} {rate.quote_currency}
+                      </TableCell>
+                      <TableCell>
+                        {(Number(rate.current_exchange_rate) - (Number(rate.current_exchange_rate) * Number(rate.markdown) / 100)).toFixed(2)} {rate.quote_currency}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end space-x-2">
@@ -273,13 +252,6 @@ export default function RatesPage() {
                             onClick={() => handleEdit(rate)}
                           >
                             <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handleDelete(rate)}
-                          >
-                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </TableCell>
