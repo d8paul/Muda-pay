@@ -160,7 +160,6 @@ export default function TransactionFeesPage() {
             <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
               <TabsList className="mb-6">
                 <TabsTrigger value="view-fees">View Fees</TabsTrigger>
-                <TabsTrigger value="create-fee">Create Fee</TabsTrigger>
                 <TabsTrigger value="fee-products">Fee Products</TabsTrigger>
                 {editingFee && <TabsTrigger value="edit-fee">Edit Fee</TabsTrigger>}
               </TabsList>
@@ -175,14 +174,6 @@ export default function TransactionFeesPage() {
                   fees={fees}
                   onEdit={handleEditFee}
                   onDelete={handleDeleteFee}
-                  isLoading={isLoading}
-                />
-              </TabsContent>
-              
-              <TabsContent value="create-fee">
-                <FeeForm
-                  onSubmit={handleCreateFee}
-                  onCancel={handleCancelEdit}
                   isLoading={isLoading}
                 />
               </TabsContent>

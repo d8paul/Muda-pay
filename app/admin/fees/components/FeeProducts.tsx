@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { get } from "@/utils/api";
+import { get, put } from "@/utils/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -90,24 +90,12 @@ export default function FeeProducts() {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_PAYMENT_API}/admin/fees/products`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({
-          status: editingProduct.status,
-          fee_type: editingProduct.fee_type,
-          fee_amount: editingProduct.fee_amount
-        }),
+      const updatedProduct = await put(`/admin/fees/products/${editingProduct.product_id}`, {
+        status: editingProduct.status,
+        fee_type: editingProduct.fee_type,
+        fee_amount: editingProduct.fee_amount
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to update fee product');
-      }
-
-      const updatedProduct = await response.json();
       setProducts((prev) =>
         prev.map((p) =>
           p.product_id === updatedProduct.product_id ? updatedProduct : p
