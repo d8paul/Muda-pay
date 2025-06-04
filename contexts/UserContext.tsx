@@ -36,6 +36,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       setLoading(true)
       setError(null)
       const response = await get("/admin/users/profile")
+      console.log("User profile response:", response)
       if (response.status === 201) {
         setUser(response.data)
       } else {
