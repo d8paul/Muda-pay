@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { get } from "@/utils/api"
+import { get, post } from "@/utils/api"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import {
@@ -20,24 +20,56 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Plus, Pencil, Trash2, Search, X } from "lucide-react"
+import { Plus, Pencil, Trash2, Search, X, CheckCircle, Loader2, Eye } from "lucide-react"
 import toast from "react-hot-toast"
 import ProgressBar from "@/components/ProgressBar"
 import AddRateModal from "../components/add-rate-modal"
 import EditRateModal from "../components/approval-rate-modal"
 import DeleteRateModal from "../components/delete-rate-modal"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { usePermissions } from '@/app/hooks/usePermissions'
 
 
 interface Rate {
   id: string
-  status: "active" | "inactive"
+  maker_id: string
+  checker_id: string | null
+  entry_type: string
+  status: string
+  reason: string | null
+  data_content: {
+    id: string
+    base_currency: string
+    quote_currency: string
+    created_at: string
+    pair: string
+    hasCrypto: boolean
+    referencePrice: string
+    markup: number
+    markdown: number
+  }
+  approved_at: string | null
+  created_at: string
+  updated_at: string
+  deleted_at: string | null
+}
+
+interface SelectedRate {
+  id: string
+  status: "active" | "inactive" | "pending"
   base_currency: string
   quote_currency: string
   hasCrypto: boolean
-  referencePrice: string | null
+  referencePrice: string
   markup: number
   markdown: number
-  current_exchange_rate: number
 }
 
 interface CurrencyOption {
@@ -64,17 +96,21 @@ export default function RatesPage() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [selectedRate, setSelectedRate] = useState<Rate | null>(null)
+  const [selectedRate, setSelectedRate] = useState<SelectedRate | null>(null)
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
+  const [selectedRateDetails, setSelectedRateDetails] = useState<Rate | null>(null)
   
   // Filter states
   const [nameFilter, setNameFilter] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [currencyFilter, setCurrencyFilter] = useState<string>("all")
 
+  const { hasRequiredPermission } = usePermissions('Approve rates')
+
   const fetchRates = async () => {
     try {
       setIsLoading(true)
-      const response = await get(`/admin/pair/prices?quote_currency=${currencyFilter}&search=${nameFilter}`)
+      const response = await get("/admin/pair/prices/pending")
       if (response && Array.isArray(response.data)) {
         setRates(response.data)
         setFilteredRates(response.data)
@@ -104,8 +140,8 @@ export default function RatesPage() {
     // Apply name filter
     if (nameFilter) {
       filtered = filtered.filter((rate) =>
-        rate.base_currency.toLowerCase().includes(nameFilter.toLowerCase()) ||
-        rate.quote_currency.toLowerCase().includes(nameFilter.toLowerCase())
+        rate.data_content.base_currency.toLowerCase().includes(nameFilter.toLowerCase()) ||
+        rate.data_content.quote_currency.toLowerCase().includes(nameFilter.toLowerCase())
       )
     }
 
@@ -116,7 +152,7 @@ export default function RatesPage() {
 
     // Apply currency filter
     if (currencyFilter !== "all") {
-      filtered = filtered.filter((rate) => rate.base_currency === currencyFilter)
+      filtered = filtered.filter((rate) => rate.data_content.base_currency === currencyFilter)
     }
 
     setFilteredRates(filtered)
@@ -136,13 +172,58 @@ export default function RatesPage() {
   }, [])
 
   const handleEdit = (rate: Rate) => {
-    setSelectedRate(rate)
+    const { id, status, data_content } = rate
+    const { id: _, ...content } = data_content
+    setSelectedRate({
+      id,
+      status: status as "active" | "inactive" | "pending",
+      ...content
+    })
     setShowEditModal(true)
   }
 
   const handleDelete = (rate: Rate) => {
-    setSelectedRate(rate)
+    const { id, status, data_content } = rate
+    const { id: _, ...content } = data_content
+    setSelectedRate({
+      id,
+      status: status as "active" | "inactive" | "pending",
+      ...content
+    })
     setShowDeleteModal(true)
+  }
+
+  const handleApprove = (rate: Rate) => {
+    const { id, status, data_content } = rate
+    const { id: _, ...content } = data_content
+    setSelectedRate({
+      id,
+      status: status as "active" | "inactive" | "pending",
+      ...content
+    })
+    setShowEditModal(true)
+  }
+
+  const handleRowClick = (rate: Rate) => {
+    setSelectedRateDetails(rate)
+    setShowDetailsModal(true)
+  }
+
+  const handleApproveRate = async () => {
+    if (!selectedRateDetails) return
+
+    try {
+      setIsLoading(true)
+      await post(`/admin/pair/prices/${selectedRateDetails.id}/approve`)
+      toast.success("Rate approved successfully")
+      setShowDetailsModal(false)
+      fetchRates() // Refresh the list
+    } catch (error) {
+      console.error("Error approving rate:", error)
+      toast.error("Failed to approve rate")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const clearFilters = () => {
@@ -151,13 +232,13 @@ export default function RatesPage() {
   }
 
   const calculateExchangeRate = (rate: Rate) => {
-    if (!rate.hasCrypto || !rate.referencePrice) return "N/A"
+    if (!rate.data_content.hasCrypto || !rate.data_content.referencePrice) return "N/A"
     
-    const baseRate = parseFloat(rate.referencePrice)
-    const markupAmount = baseRate * (rate.markup / 100)
-    const markdownAmount = baseRate * (rate.markdown / 100)
+    const baseRate = parseFloat(rate.data_content.referencePrice)
+    const markupAmount = baseRate * (rate.data_content.markup / 100)
+    const markdownAmount = baseRate * (rate.data_content.markdown / 100)
     const finalRate = baseRate + markupAmount - markdownAmount
-    return `1 ${rate.base_currency} = ${finalRate.toFixed(8)} ${rate.quote_currency}`
+    return `1 ${rate.data_content.base_currency} = ${finalRate.toFixed(8)} ${rate.data_content.quote_currency}`
   }
 
   return (
@@ -216,60 +297,63 @@ export default function RatesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Pairs</TableHead>
-                        <TableHead>Markup (%)</TableHead>
-                        <TableHead>Markdown (%)</TableHead>
-                        <TableHead>Buy Price</TableHead>
-                        <TableHead>Sell Price</TableHead>
+                    <TableHead>Pair</TableHead>
+                    <TableHead>Markup</TableHead>
+                    <TableHead>Markdown</TableHead>
+                    <TableHead>Entry Type</TableHead>
+                    <TableHead>Created At</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {!isLoading && filteredRates.map((rate) => (
-                    <TableRow key={rate.id}>
-                      <TableCell>
-                       {rate.base_currency}/{rate.quote_currency}
-                      </TableCell>
-                      <TableCell>{rate.markup}%</TableCell>
-                      <TableCell>{rate.markdown}%</TableCell>
-                      <TableCell>
-                        {(Number(rate.current_exchange_rate) + (Number(rate.current_exchange_rate) * Number(rate.markup) / 100)).toFixed(2)} {rate.quote_currency}
-                      </TableCell>
-                      <TableCell>
-                        {(Number(rate.current_exchange_rate) - (Number(rate.current_exchange_rate) * Number(rate.markdown) / 100)).toFixed(2)} {rate.quote_currency}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end space-x-2">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handleEdit(rate)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
+                  {isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center">
+                        <div className="flex justify-center items-center py-4">
+                          <Loader2 className="h-6 w-6 animate-spin text-gray-500" />
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
-
-
-                  {!isLoading && filteredRates.length === 0 && (
+                  ) : filteredRates.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-4">
                         No rates found
                       </TableCell>
                     </TableRow>
+                  ) : (
+                    filteredRates.map((rate) => (
+                      <TableRow 
+                        key={rate.id}
+                        className="cursor-pointer hover:bg-gray-50"
+                        onClick={() => handleRowClick(rate)}
+                      >
+                        <TableCell>
+                          {rate.data_content.base_currency}/{rate.data_content.quote_currency}
+                        </TableCell>
+                        <TableCell>{rate.data_content.markup}%</TableCell>
+                        <TableCell>{rate.data_content.markdown}%</TableCell>
+                        <TableCell className="capitalize">{rate.entry_type.replace(/_/g, ' ')}</TableCell>
+                        <TableCell>{new Date(rate.created_at).toLocaleString()}</TableCell>
+                        <TableCell className="text-right">
+                          {hasRequiredPermission && (
+                            <div className="flex justify-end space-x-2">
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleApprove(rate)
+                                }}
+                                className="text-green-600 hover:text-green-700"
+                              >
+                                <CheckCircle className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
                   )}
-
-                  
-                  {isLoading && (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-4">
-                        Loading Pair Prices
-                      </TableCell>
-                    </TableRow>
-                  )}
-    
                 </TableBody>
               </Table>
             </Card>
@@ -295,8 +379,8 @@ export default function RatesPage() {
               setSelectedRate(null)
             }}
             rate={selectedRate}
+            fetchRates={fetchRates}
             onSuccess={() => {
-
               setShowEditModal(false)
               setSelectedRate(null)
               fetchRates()
@@ -309,8 +393,7 @@ export default function RatesPage() {
               setShowDeleteModal(false)
               setSelectedRate(null)
             }}
-            rate={selectedRate}
-            onSuccess={() => {
+            onConfirm={() => {
               setShowDeleteModal(false)
               setSelectedRate(null)
               fetchRates()
@@ -318,6 +401,66 @@ export default function RatesPage() {
           />
         </>
       )}
+
+      {/* Details Modal */}
+      <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Rate Details</DialogTitle>
+          </DialogHeader>
+          {selectedRateDetails && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Pair</Label>
+                <div className="col-span-3">
+                  {selectedRateDetails.data_content.base_currency}/{selectedRateDetails.data_content.quote_currency}
+                </div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Markup</Label>
+                <div className="col-span-3">{selectedRateDetails.data_content.markup}%</div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Markdown</Label>
+                <div className="col-span-3">{selectedRateDetails.data_content.markdown}%</div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Entry Type</Label>
+                <div className="col-span-3 capitalize">{selectedRateDetails.entry_type.replace(/_/g, ' ')}</div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Created At</Label>
+                <div className="col-span-3">{new Date(selectedRateDetails.created_at).toLocaleString()}</div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Status</Label>
+                <div className="col-span-3 capitalize">{selectedRateDetails.status}</div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDetailsModal(false)}>
+              Close
+            </Button>
+            {hasRequiredPermission && (
+              <Button 
+                onClick={handleApproveRate}
+                className="bg-green-600 hover:bg-green-700"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Approving...
+                  </>
+                ) : (
+                  'Approve Rate'
+                )}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 } 

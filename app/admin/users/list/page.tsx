@@ -61,7 +61,7 @@ export default function UsersListPage() {
       
       if (usersData.status === 200) {
         setUsers(usersData.data)
-        setUserStats(statsData.data)
+      setUserStats(statsData.data)
       } else {
         throw new Error("Failed to fetch users")
       }

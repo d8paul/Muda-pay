@@ -129,7 +129,7 @@ export default function AddBusinessPage() {
                   {/* Business Details Section */}
                   <div className="space-y-4">
                     <h3 className="text-lg font-medium">Business Details</h3>
-                    <div>
+              <div>
                       <Label htmlFor="business_name">Business Name</Label>
                       <Input
                         type="text"
@@ -140,9 +140,9 @@ export default function AddBusinessPage() {
                         placeholder="Enter business name"
                         required
                       />
-                    </div>
+              </div>
 
-                    <div>
+              <div>
                       <Label htmlFor="phone_number">Business Phone Number</Label>
                       <PhoneInput
                         name="phone_number"
@@ -152,9 +152,9 @@ export default function AddBusinessPage() {
                         placeholder="Enter business phone number"
                         required
                       />
-                    </div>
+              </div>
 
-                    <div>
+              <div>
                       <Label htmlFor="address">Business Address</Label>
                       <Input
                         type="text"
@@ -165,15 +165,15 @@ export default function AddBusinessPage() {
                         placeholder="Enter business address"
                         required
                       />
-                    </div>
-                  </div>
+              </div>
+              </div>
 
                   <div className="border-t border-gray-200 my-6" />
 
                   {/* Contact Person Details Section */}
                   <div className="space-y-4">
                     <h3 className="text-lg font-medium">Contact Person Details</h3>
-                    <div>
+              <div>
                       <Label htmlFor="contact_person_name">Contact Person Name</Label>
                       <Input
                         type="text"
@@ -184,9 +184,9 @@ export default function AddBusinessPage() {
                         placeholder="Enter contact person's name"
                         required
                       />
-                    </div>
+              </div>
 
-                    <div>
+              <div>
                       <Label htmlFor="contact_email">Contact Email</Label>
                       <Input
                         type="email"
@@ -197,9 +197,9 @@ export default function AddBusinessPage() {
                         placeholder="Enter contact person's email"
                         required
                       />
-                    </div>
+              </div>
 
-                    <div>
+              <div>
                       <Label htmlFor="contact_phone">Contact Phone</Label>
                       <PhoneInput
                         name="contact_phone"
@@ -209,14 +209,14 @@ export default function AddBusinessPage() {
                         placeholder="Enter contact person's phone number"
                         required
                       />
-                    </div>
-                  </div>
+              </div>
+              </div>
 
                   <div className="flex justify-end pt-4">
-                    <Button type="submit" disabled={isLoading}>
-                      {isLoading ? "Adding Business..." : "Add Business"}
-                    </Button>
-                  </div>
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading ? "Adding Business..." : "Add Business"}
+                </Button>
+              </div>
                 </CardContent>
               </Card>
             </form>

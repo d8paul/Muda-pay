@@ -25,6 +25,11 @@ interface AddRateModalProps {
   onSuccess: () => void
 }
 
+interface CurrencyOption {
+  asset_code: string
+  currency: string
+}
+
 export default function AddRateModal({ open, onClose, onSuccess }: AddRateModalProps) {
   const [status, setStatus] = useState<"active" | "inactive">("active")
   const [baseCurrency, setBaseCurrency] = useState("")
@@ -34,7 +39,7 @@ export default function AddRateModal({ open, onClose, onSuccess }: AddRateModalP
   const [markup, setMarkup] = useState("0")
   const [markdown, setMarkdown] = useState("0")
   const [isLoading, setIsLoading] = useState(false)
-  const [currencyOptions, setCurrencies] = useState<string[]>([])
+  const [currencyOptions, setCurrencies] = useState<CurrencyOption[]>([])
 
   const { 
     show2FAModal, 
@@ -89,21 +94,19 @@ export default function AddRateModal({ open, onClose, onSuccess }: AddRateModalP
       hasCrypto: hasCrypto,
       referencePrice: referencePrice || "",
       markup: parseFloat(markup) || 0,
-      markdown: parseFloat(markdown) || 0,
-      status: status
+      markdown: parseFloat(markdown) || 0
     }
 
     await requireTwoFactorAuth(rateData, async (data: any, token?: string) => {
       try {
         const response = await post("/admin/pair/prices", { ...data, token })
         if (response.status === 201) {
-
           setShow2FAModal(false)
           toast.success("Pair Price Rate created successfully")
           onSuccess()
+          onClose()
           
           // Reset form
-          setStatus("active")
           setBaseCurrency("")
           setQuoteCurrency("")
           setHasCrypto(false)
@@ -111,11 +114,11 @@ export default function AddRateModal({ open, onClose, onSuccess }: AddRateModalP
           setMarkup("0")
           setMarkdown("0")
         } else {
-          // toast.error("Failed to create rate")
+          toast.error("Failed to create rate")
         }
       } catch (error) {
         console.error("Error creating rate:", error)
-        // toast.error("Failed to create rate")
+        toast.error("Failed to create rate")
       } finally {
         setIsLoading(false)
       }

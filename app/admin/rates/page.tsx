@@ -27,7 +27,6 @@ import AddRateModal from "./components/add-rate-modal"
 import EditRateModal from "./components/edit-rate-modal"
 import DeleteRateModal from "./components/delete-rate-modal"
 
-
 interface Rate {
   id: string
   status: "active" | "inactive"
@@ -46,18 +45,7 @@ interface CurrencyOption {
 }
 
 export default function RatesPage() {
-  const [rates, setRates] = useState<Rate[]>([
-    // {
-    //   id: "rate_123",
-    //   status: "active",
-    //   base_currency: "UGX",
-    //   quote_currency: "USDT",
-    //   hasCrypto: true,
-    //   referencePrice: "3800.50",
-    //   markup: 2.5,
-    //   markdown: 0.5
-    // }
-  ])
+  const [rates, setRates] = useState<Rate[]>([])
   const [filteredRates, setFilteredRates] = useState<Rate[]>([])
   const [currencyOptions, setCurrencyOptions] = useState<CurrencyOption[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -182,8 +170,6 @@ export default function RatesPage() {
           <div className="py-4">
             <Card className="p-4 mb-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
@@ -193,8 +179,6 @@ export default function RatesPage() {
                     className="pl-10"
                   />
                 </div>
-
-
                 <Select value={currencyFilter} onValueChange={setCurrencyFilter}>
                   <SelectTrigger>
                     <SelectValue placeholder="Filter by base currency" />
@@ -264,7 +248,6 @@ export default function RatesPage() {
                     </TableRow>
                   ))}
 
-
                   {!isLoading && filteredRates.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-4">
@@ -272,7 +255,6 @@ export default function RatesPage() {
                       </TableCell>
                     </TableRow>
                   )}
-
                   
                   {isLoading && (
                     <TableRow>
@@ -281,7 +263,6 @@ export default function RatesPage() {
                       </TableCell>
                     </TableRow>
                   )}
-    
                 </TableBody>
               </Table>
             </Card>

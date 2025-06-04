@@ -22,7 +22,7 @@ import { useTwoFactorAuth } from "@/hooks/useTwoFactorAuth"
 
 interface Rate {
   id: string
-  status: "active" | "inactive"
+  status: "active" | "inactive" | "pending"
   base_currency: string
   quote_currency: string
   hasCrypto: boolean
@@ -46,7 +46,7 @@ interface EditRateModalProps {
 
 export default function EditRateModal({ open, onClose, onSuccess, rate, fetchRates }: EditRateModalProps) {
   const router = useRouter()
-  const [status, setStatus] = useState<"active" | "inactive">("active")
+  const [status, setStatus] = useState<"active" | "inactive" | "pending">("active")
   const [baseCurrency, setBaseCurrency] = useState("UGX")
   const [quoteCurrency, setQuoteCurrency] = useState("USDT")
   const [hasCrypto, setHasCrypto] = useState(false)
@@ -104,33 +104,27 @@ export default function EditRateModal({ open, onClose, onSuccess, rate, fetchRat
     if (!rate) return
 
     const rateData = {
-      status,
-      base_currency: baseCurrency,
-      quote_currency: quoteCurrency,
-      hasCrypto,
-      referencePrice: referencePrice || null,
+      referencePrice: referencePrice || "",
       markup: parseFloat(markup) || 0,
-      markdown: parseFloat(markdown) || 0,
-
+      markdown: parseFloat(markdown) || 0
     }
 
     await requireTwoFactorAuth(rateData, async (data: any, token?: string) => {
       try {
         const responseUpdate = await put(`/admin/pair/prices/${rate.id}`, { ...data, token })
         if (responseUpdate.status === 200) {
-
           setShow2FAModal(false)
           onSuccess()
           onClose(false)
           toast.success("Rate updated successfully")
           await fetchRates() // Refresh the rates list
         } else {
-
           setShow2FAModal(true)
           onClose(true)
         }
       } catch (error) {
-        // toast.error("Failed to update rate")
+        console.error("Error updating rate:", error)
+        toast.error("Failed to update rate")
       }
     })
   }
@@ -220,7 +214,7 @@ export default function EditRateModal({ open, onClose, onSuccess, rate, fetchRat
               <Label htmlFor="status">Status</Label>
               <Select
                 value={status}
-                onValueChange={(value: "active" | "inactive") => setStatus(value)}
+                onValueChange={(value: "active" | "inactive" | "pending") => setStatus(value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select status" />
@@ -228,6 +222,7 @@ export default function EditRateModal({ open, onClose, onSuccess, rate, fetchRat
                 <SelectContent>
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
                 </SelectContent>
               </Select>
             </div>

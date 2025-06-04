@@ -22,7 +22,7 @@ import { useTwoFactorAuth } from "@/hooks/useTwoFactorAuth"
 
 interface Rate {
   id: string
-  status: "active" | "inactive"
+  status: "active" | "inactive" | "pending"
   base_currency: string
   quote_currency: string
   hasCrypto: boolean
@@ -38,24 +38,18 @@ interface CurrencyOption {
 
 interface EditRateModalProps {
   open: boolean
-  onClose: (option?: boolean) => void
+  onClose: (option: any) => void
+  rate: Rate
   onSuccess: () => void
-  rate: Rate | null
-  fetchRates: () => Promise<void>
+  fetchRates: () => void
 }
 
-export default function EditRateModal({ open, onClose, onSuccess, rate, fetchRates }: EditRateModalProps) {
+export default function ApprovalRateModal({ open, onClose, onSuccess, rate, fetchRates }: EditRateModalProps) {
   const router = useRouter()
-  const [status, setStatus] = useState<"active" | "inactive">("active")
-  const [baseCurrency, setBaseCurrency] = useState("UGX")
-  const [quoteCurrency, setQuoteCurrency] = useState("USDT")
-  const [hasCrypto, setHasCrypto] = useState(false)
-  const [referencePrice, setReferencePrice] = useState("")
-  const [markup, setMarkup] = useState("0")
-  const [markdown, setMarkdown] = useState("0")
   const [isLoading, setIsLoading] = useState(false)
-  const [currencyOptions, setCurrencies] = useState<CurrencyOption[]>([])
   const [twoFactorStatus, setTwoFactorStatus] = useState<string | null>(null)
+
+  if (!rate) return null
 
   const { 
     show2FAModal, 
@@ -74,63 +68,27 @@ export default function EditRateModal({ open, onClose, onSuccess, rate, fetchRat
     await originalHandle2FASubmit(token)
   }
 
-  useEffect(() => {
-    const fetchCurrencies = async () => {
+  const handleApprove = async () => {
+    const approvalData = {
+      status: "approved"
+    }
+
+    await requireTwoFactorAuth(approvalData, async (data: any, token?: string) => {
       try {
-        const response = await get("/clients/currencies")       
-        setCurrencies(response.data)
-      } catch (error) {
-        console.error("Error fetching currencies:", error)
-        toast.error("Failed to fetch currencies")
-      }
-    }
-    fetchCurrencies()
-  }, [])
-
-  useEffect(() => {
-    if (rate) {
-      setStatus(rate.status)
-      setBaseCurrency(rate.base_currency)
-      setQuoteCurrency(rate.quote_currency)
-      setHasCrypto(rate.hasCrypto)
-      setReferencePrice(rate.referencePrice || "")
-      setMarkup(rate.markup.toString())
-      setMarkdown(rate.markdown.toString())
-    }
-  }, [rate])
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!rate) return
-
-    const rateData = {
-      status,
-      base_currency: baseCurrency,
-      quote_currency: quoteCurrency,
-      hasCrypto,
-      referencePrice: referencePrice || null,
-      markup: parseFloat(markup) || 0,
-      markdown: parseFloat(markdown) || 0,
-
-    }
-
-    await requireTwoFactorAuth(rateData, async (data: any, token?: string) => {
-      try {
-        const responseUpdate = await put(`/admin/pair/prices/${rate.id}`, { ...data, token })
-        if (responseUpdate.status === 200) {
-
+        const response = await put(`/admin/pair/prices/${rate.id}/add/approve`, { ...data, token })
+        if (response.status === 200) {
           setShow2FAModal(false)
           onSuccess()
           onClose(false)
-          toast.success("Rate updated successfully")
-          await fetchRates() // Refresh the rates list
+          toast.success("Rate approved successfully")
+          await fetchRates()
         } else {
-
           setShow2FAModal(true)
           onClose(true)
         }
       } catch (error) {
-        // toast.error("Failed to update rate")
+        console.error("Error approving rate:", error)
+        toast.error("Failed to approve rate")
       }
     })
   }
@@ -145,46 +103,52 @@ export default function EditRateModal({ open, onClose, onSuccess, rate, fetchRat
         onSubmit={handle2FASubmit}
         isLoading={twoFALoading}
       />
-
       
       <Dialog open={open} onOpenChange={() => onClose(true)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle> Rate Approval </DialogTitle>
+            <DialogTitle>Approve Rate</DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 gap-4">
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="baseCurrency">Base Currency </Label>
-
+                <Label>Base Currency</Label>
+                <p>{rate.base_currency}</p>
               </div>
+
               <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
-                <Select
-                  value={status}
-                  onValueChange={(value: "approved" | "rejected") => setStatus(value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="approved">Approve</SelectItem>
-                    <SelectItem value="rejected">Reject</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label>Quote Currency</Label>
+                <p>{rate.quote_currency}</p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Reference Price</Label>
+              <p>{rate.referencePrice || "N/A"}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Markup (%)</Label>
+                <p>{rate.markup}%</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Markdown (%)</Label>
+                <p>{rate.markdown}%</p>
               </div>
             </div>
 
             <div className="flex justify-end space-x-2">
-              <Button type="button" variant="outline" onClick={() => onClose(false)}>
+              <Button variant="outline" onClick={() => onClose(true)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? "Updating..." : "Update Rate"}
+              <Button onClick={handleApprove} className="bg-green-600 hover:bg-green-700">
+                Approve Rate
               </Button>
             </div>
-          </form>
+          </div>
         </DialogContent>
       </Dialog>
     </>

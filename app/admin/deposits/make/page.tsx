@@ -47,7 +47,7 @@ export default function MakeDepositPage() {
   })
   
   const isLoading = localLoading || twoFALoading
-
+  
   useEffect(() => {
     // Check 2FA status on page load
     const checkTwoFactorStatus = async () => {
@@ -159,7 +159,7 @@ export default function MakeDepositPage() {
                   <Select
                     value={formData.walletId}
                     onValueChange={handleWalletIdChange}
-                    disabled={localLoading}
+                      disabled={localLoading}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select a client" />
