@@ -90,20 +90,19 @@ export default function FeeProducts() {
 
     setIsLoading(true);
     try {
-      const updatedProduct = await put(`/admin/fees/products/${editingProduct.product_id}`, {
+      await put(`/admin/fees/products/${editingProduct.product_id}`, {
         status: editingProduct.status,
         fee_type: editingProduct.fee_type,
         fee_amount: editingProduct.fee_amount
       });
 
-      setProducts((prev) =>
-        prev.map((p) =>
-          p.product_id === updatedProduct.product_id ? updatedProduct : p
-        )
-      );
-      toast.success("Fee product updated successfully");
+      // Close dialog and show notification first
       setIsDialogOpen(false);
       setEditingProduct(null);
+      toast.success("Fee product updated successfully");
+
+      // Fetch fresh data from the server
+      await loadProducts();
     } catch (error) {
       console.error("Error updating fee product:", error);
       toast.error("Failed to update fee product");
