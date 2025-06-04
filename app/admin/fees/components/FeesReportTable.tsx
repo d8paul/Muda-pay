@@ -337,10 +337,9 @@ const FeesReportTable = ({ items, isLoading }: FeesReportTableProps) => {
               <TableHead>Receive Currency</TableHead>
               <TableHead>Receive Amount</TableHead>
               <TableHead>Exchange Rate</TableHead>
-              <TableHead>Account Number</TableHead>
+              <TableHead>Fee</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Pay-in Status</TableHead>
-              <TableHead>Fee</TableHead>
               <TableHead>Created On</TableHead>
             </TableRow>
           </TableHeader>
@@ -367,7 +366,7 @@ const FeesReportTable = ({ items, isLoading }: FeesReportTableProps) => {
                   <TableCell>{item.receive_currency}</TableCell>
                   <TableCell>{formatCurrency(item.receive_amount)}</TableCell>
                   <TableCell>{formatCurrency(item.ex_rate)}</TableCell>
-                  <TableCell>{item.account_number}</TableCell>
+                  <TableCell>{formatCurrency(item.fee)}</TableCell>
                   <TableCell>
                     <Badge
                       variant="secondary"
@@ -384,7 +383,6 @@ const FeesReportTable = ({ items, isLoading }: FeesReportTableProps) => {
                       {item.pay_in_status}
                     </Badge>
                   </TableCell>
-                  <TableCell>{formatCurrency(item.fee)}</TableCell>
                   <TableCell>{formatDate(item.created_on)}</TableCell>
                 </TableRow>
               ))

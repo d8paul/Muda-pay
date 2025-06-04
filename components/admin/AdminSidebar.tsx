@@ -13,6 +13,7 @@ import {
   ChevronDownIcon,
   ChartBarIcon,
   DocumentCurrencyDollarIcon,
+  CurrencyDollarIcon,
 } from "@heroicons/react/24/outline"
 
 import BavaPayLogo from "../BavaPayLogo"
@@ -35,7 +36,7 @@ const menuItems = [
     submenu: [
       { name: "Business List", path: "/admin/business/businesslist" },
       { name: "Add Business", path: "/admin/business/addbusiness" },
-      
+      { name: "Fee Products", path: "/admin/fees/products" }
     ],
   },
   {
@@ -47,6 +48,7 @@ const menuItems = [
     ],
   },
   { name: "Roles", icon: UsersIcon, path: "/admin/roles" },
+  { name: "Rates", icon: CurrencyDollarIcon, path: "/admin/rates" },
   {
     name: "Reports",
     icon: ChartBarIcon,
@@ -60,18 +62,19 @@ const menuItems = [
           { name: "Fees", path: "/admin/reports/liquidity-rail?tab=fees" },
         ],
       },
+      {
+        name: "Profit and Loss",
+        submenu: [
+          { name: "Transactions", path: "/admin/reports/profit-loss?tab=transactions" }
+        ],
+      },
       { name: "Volume", path: "/admin/reports/volume" },
       { name: "Collections", path: "/admin/reports/collections-report" },
       { name: "Payout", path: "/admin/reports/payout-report" },
       { name: "Charges", path: "/admin/reports/charges-report" },
       { name: "Wallets", path: "/admin/reports/wallet-report" },
     ],
-  },/* 
-  {
-    name: "Fees",
-    icon: DocumentCurrencyDollarIcon,
-    path: "/admin/fees",
-  }, */
+  },
   { name: "Settings", icon: Cog6ToothIcon, path: "/admin/settings" },
 ]
 
@@ -84,7 +87,6 @@ export default function AdminSidebar() {
   }
 
   const isActive = (path: string) => {
-    // For exact matches including query parameters
     return pathname === path
   }
 

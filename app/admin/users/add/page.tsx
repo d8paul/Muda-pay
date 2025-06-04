@@ -8,23 +8,106 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import toast from "react-hot-toast"
 import ProgressBar from "@/components/ProgressBar"
-import { post } from "@/utils/api"
-import { useTwoFactorCheck } from "@/hooks/useTwoFactorCheck"
+import { post, get } from "@/utils/api"
+import { useTwoFactorAuth } from "@/hooks/useTwoFactorAuth"
+import TwoFactorAuthDialog from "@/components/TwoFactorAuthDialog"
+
+interface Role {
+  id: string
+  name: string
+}
 
 export default function AddUserPage() {
   const router = useRouter()
-  const { checkAndRedirect } = useTwoFactorCheck()
-  const [isLoading, setIsLoading] = useState(false)
+  const [localLoading, setLocalLoading] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
+  const [sortField, setSortField] = useState("name")
+  const [sortOrder, setSortOrder] = useState("asc")
+  const [nameFilter, setNameFilter] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [rightsFilter, setRightsFilter] = useState("all")
+  const [roles, setRoles] = useState<Role[]>([])
+  const [filteredRoles, setFilteredRoles] = useState<Role[]>([])
+  const [totalItems, setTotalItems] = useState(0)
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
     email: "",
     role: "",
   })
+  const [twoFactorStatus, setTwoFactorStatus] = useState<string | null>(null)
+  
+  const { 
+    show2FAModal, 
+    setShow2FAModal,
+    isLoading: twoFALoading, 
+    requireTwoFactorAuth,
+    handle2FASubmit 
+  } = useTwoFactorAuth({
+    onSuccess: () => {
+      toast.success("User added successfully")
+      router.push("/admin/users/list")
+    },
+    redirectOnMissing: true
+  })
+
+  const isLoading = localLoading || twoFALoading
 
   useEffect(() => {
-    checkAndRedirect()
-  }, [checkAndRedirect])
+    // Check 2FA status on page load
+    const checkTwoFactorStatus = async () => {
+      try {
+        const response = await get("/admin/users/2fa/status")
+        setTwoFactorStatus(response.data.status)
+        
+        if (response.data.status !== "active") {
+          toast.error("Please enable Two-Factor Authentication before proceeding")
+          router.push("/admin/settings")
+        }
+      } catch (error) {
+        console.error("Error checking 2FA status:", error)
+      }
+    }
+    
+    checkTwoFactorStatus()
+    fetchRoles()
+  }, [])
+
+
+  const fetchRoles = async () => {
+    try {
+      setLocalLoading(true)
+      const response = await get("/admin/roles", {
+        params: {
+          page: currentPage,
+          limit: itemsPerPage,
+          sort_by: sortField,
+          sort_order: sortOrder,
+          name: nameFilter || undefined,
+          status: statusFilter !== "all" ? statusFilter : undefined,
+          access_right: rightsFilter !== "all" ? rightsFilter : undefined,
+        },
+      })
+      if (response && Array.isArray(response.data)) {
+        setRoles(response.data)
+        setFilteredRoles(response.data)
+        setTotalItems(response.total || response.data.length)
+      } else {
+        console.error("Invalid response format:", response)
+        toast.error("Invalid response format from server")
+        setRoles([])
+        setFilteredRoles([])
+      }
+    } catch (error) {
+      console.error("Error fetching roles:", error)
+      toast.error("Failed to fetch roles")
+      setRoles([])
+      setFilteredRoles([])
+    } finally {
+      setLocalLoading(false)
+    }
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -43,33 +126,40 @@ export default function AddUserPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    // Check 2FA status before submitting
-    const canProceed = await checkAndRedirect()
-    if (!canProceed) return
-
-    setIsLoading(true)
+    
+    const userData = {
+      first_name: formData.firstName,
+      last_name: formData.lastName,
+      email: formData.email,
+      user_role: formData.role,
+    }
+    
+    await requireTwoFactorAuth(userData, addUser)
+  }
+  
+  const addUser = async (data: any, token?: string) => {
+    setLocalLoading(true)
     try {
-      // API call to add user
-      await post("admin/users", {
-        first_name: formData.firstName,
-        last_name: formData.lastName,
-        email: formData.email,
-        user_role: formData.role,
-      })
-
-      toast.success("User added successfully")
-      router.push("/admin/users/list")
+      // If token is provided, include it in the request
+      const payload = token ? { ...data, token } : data
+      await post("admin/users", payload)
     } catch (error) {
       toast.error("Failed to add user. Please try again.")
+      throw error
     } finally {
-      setIsLoading(false)
+      setLocalLoading(false)
     }
   }
 
   return (
     <>
       <ProgressBar isLoading={isLoading} />
+      <TwoFactorAuthDialog
+        open={show2FAModal}
+        onOpenChange={setShow2FAModal}
+        onSubmit={handle2FASubmit}
+        isLoading={twoFALoading}
+      />
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
           <h1 className="text-2xl font-semibold text-gray-900">Add User</h1>
@@ -119,8 +209,11 @@ export default function AddUserPage() {
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="approver">Approver</SelectItem>
-                  <SelectItem value="verifier">Verifier</SelectItem>
+                  {roles.map((role: any) => (
+                    <SelectItem key={role.id} value={role.id}>
+                      {role.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

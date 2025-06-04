@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label"
 import toast from "react-hot-toast"
 import ProgressBar from "@/components/ProgressBar"
 import { get, post } from "@/utils/api"
-import { useTwoFactorCheck } from "@/hooks/useTwoFactorCheck"
+import { useTwoFactorAuth } from "@/hooks/useTwoFactorAuth"
+import TwoFactorAuthDialog from "@/components/TwoFactorAuthDialog"
 
 interface Client {
   client_id: string
@@ -15,8 +16,7 @@ interface Client {
 }
 
 export default function MakeDepositPage() {
-  const { checkAndRedirect } = useTwoFactorCheck()
-  const [isLoading, setIsLoading] = useState(false)
+  const [localLoading, setLocalLoading] = useState(false)
   const [formData, setFormData] = useState({
     walletId: "",
     amount: "",
@@ -27,10 +27,49 @@ export default function MakeDepositPage() {
   const [clients, setClients] = useState<Client[]>([])
   const [filteredClients, setFilteredClients] = useState<Client[]>([])
   const [showDropdown, setShowDropdown] = useState(false)
-
+  const [twoFactorStatus, setTwoFactorStatus] = useState<string | null>(null)
+  
+  const { 
+    show2FAModal, 
+    setShow2FAModal,
+    isLoading: twoFALoading, 
+    requireTwoFactorAuth,
+    handle2FASubmit 
+  } = useTwoFactorAuth({
+    onSuccess: () => {
+      toast.success("Deposit request submitted successfully")
+      setFormData({
+        walletId: "",
+        amount: "",
+        narration: "",
+        depositReference: "",
+      })
+      setSearchTerm("")
+      setShowDropdown(false)
+    },
+    redirectOnMissing: true
+  })
+  
+  const isLoading = localLoading || twoFALoading
+  
   useEffect(() => {
-    checkAndRedirect()
-  }, [checkAndRedirect])
+    // Check 2FA status on page load
+    const checkTwoFactorStatus = async () => {
+      try {
+        const response = await get("/admin/users/2fa/status")
+        setTwoFactorStatus(response.data.status)
+        
+        if (response.data.status !== "active") {
+          toast.error("Please enable Two-Factor Authentication before proceeding")
+          window.location.href = "/admin/settings"
+        }
+      } catch (error) {
+        console.error("Error checking 2FA status:", error)
+      }
+    }
+    
+    checkTwoFactorStatus()
+  }, [])
 
   useEffect(() => {
     const fetchClients = async () => {
@@ -40,7 +79,7 @@ export default function MakeDepositPage() {
         return
       }
 
-      setIsLoading(true)
+      setLocalLoading(true)
       try {
         const response = await get(`/admin/clients/${searchTerm}`)
         if (response.status === 200) {
@@ -52,11 +91,18 @@ export default function MakeDepositPage() {
         console.error("Error fetching clients:", error)
         setShowDropdown(false)
       } finally {
-        setIsLoading(false)
+        setLocalLoading(false)
       }
     }
 
-    fetchClients()
+    // Debounce search to avoid unnecessary API calls
+    const debounceTimeout = setTimeout(() => {
+      if (searchTerm.trim()) {
+        fetchClients();
+      }
+    }, 300);
+
+    return () => clearTimeout(debounceTimeout);
   }, [searchTerm])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,48 +116,48 @@ export default function MakeDepositPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // Check 2FA status before submitting
-    const canProceed = await checkAndRedirect()
-    if (!canProceed) return
-
-    setIsLoading(true)
-
+    const depositData = {
+      clientId: formData.walletId,
+      amount: parseFloat(formData.amount),
+      currency: "UGX",
+      product_id: "10000",
+      account_number: formData.depositReference,
+      reference_id: formData.depositReference,
+      public_key: "GBPREREREREOOPOPOOREOPREOREOPROPROEROP",
+      narration: formData.narration
+    }
+    
+    await requireTwoFactorAuth(depositData, makeDeposit)
+  }
+  
+  const makeDeposit = async (data: any, token?: string) => {
+    setLocalLoading(true)
     try {
-      const requestBody = {
-        clientId: formData.walletId,
-        amount: parseFloat(formData.amount),
-        currency: "UGX",
-        product_id: "10000",
-        account_number: formData.depositReference,
-        reference_id: formData.depositReference,
-        public_key: "GBPREREREREOOPOPOOREOPREOREOPROPROEROP",
-      }
-
-      const response = await post("/admin/depositRequest", requestBody)
-
-      if (response.status === 200) {
-        toast.success("Deposit request submitted successfully")
-        setFormData({
-          walletId: "",
-          amount: "",
-          narration: "",
-          depositReference: "",
-        })
-        setSearchTerm("")
-        setShowDropdown(false)
-      } else {
-        console.error("Failed to submit deposit request")
+      // Add token to payload if provided
+      const payload = token ? { ...data, token } : data
+      
+      const response = await post("/admin/depositRequest", payload)
+      if (response.status !== 200) {
+        throw new Error("Failed to submit deposit request")
       }
     } catch (error) {
       console.error("Error submitting deposit request:", error)
+      toast.error("Failed to submit deposit request")
+      throw error
     } finally {
-      setIsLoading(false)
+      setLocalLoading(false)
     }
   }
 
   return (
     <>
-      <ProgressBar isLoading={isLoading} />
+      <ProgressBar isLoading={twoFALoading} />
+      <TwoFactorAuthDialog
+        open={show2FAModal}
+        onOpenChange={setShow2FAModal}
+        onSubmit={handle2FASubmit}
+        isLoading={twoFALoading}
+      />
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
           <h1 className="text-2xl font-semibold text-gray-900">Make Deposit</h1>
@@ -122,15 +168,23 @@ export default function MakeDepositPage() {
               <div>
                 <Label htmlFor="walletId">Wallet ID</Label>
                 <div className="mt-1 relative">
-                  <Input
-                    type="text"
-                    name="walletId"
-                    id="walletId"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search for wallet ID or client name"
-                    className="w-full"
-                  />
+                  <div className="relative">
+                    <Input
+                      type="text"
+                      name="walletId"
+                      id="walletId"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Search for wallet ID or client name"
+                      className={`w-full ${localLoading ? 'pr-10' : ''}`}
+                      disabled={localLoading}
+                    />
+                    {localLoading && (
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <div className="h-4 w-4 border-2 border-t-transparent border-blue-500 rounded-full animate-spin"></div>
+                      </div>
+                    )}
+                  </div>
                   {showDropdown && filteredClients.length > 0 && (
                     <ul className="mt-2 border border-gray-300 rounded-md max-h-40 overflow-auto absolute z-10 bg-white w-full">
                       {filteredClients.map((client) => (
@@ -194,8 +248,11 @@ export default function MakeDepositPage() {
               </div>
 
               <div>
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading ? "Processing..." : "Make Deposit"}
+                <Button 
+                  type="submit" 
+                  disabled={localLoading || twoFALoading}
+                >
+                  {(localLoading || twoFALoading) ? "Processing..." : "Make Deposit"}
                 </Button>
               </div>
             </form>
