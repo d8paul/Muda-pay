@@ -6,6 +6,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import TwoFactorAuthDialog from "@/components/TwoFactorAuthDialog"
+import { useTwoFactorAuth } from "@/hooks/useTwoFactorAuth"
 import {
   Select,
   SelectContent,
@@ -25,14 +27,31 @@ interface AddRateModalProps {
 
 export default function AddRateModal({ open, onClose, onSuccess }: AddRateModalProps) {
   const [status, setStatus] = useState<"active" | "inactive">("active")
-  const [baseCurrency, setBaseCurrency] = useState("UGX")
-  const [quoteCurrency, setQuoteCurrency] = useState("USDT")
+  const [baseCurrency, setBaseCurrency] = useState("")
+  const [quoteCurrency, setQuoteCurrency] = useState("")
   const [hasCrypto, setHasCrypto] = useState(false)
   const [referencePrice, setReferencePrice] = useState("")
   const [markup, setMarkup] = useState("0")
   const [markdown, setMarkdown] = useState("0")
   const [isLoading, setIsLoading] = useState(false)
   const [currencyOptions, setCurrencies] = useState<string[]>([])
+
+  const { 
+    show2FAModal, 
+    setShow2FAModal,
+    isLoading: twoFALoading, 
+    requireTwoFactorAuth,
+    handle2FASubmit: originalHandle2FASubmit 
+  } = useTwoFactorAuth({
+    onSuccess: (token?: string) => {
+      // onSuccess()
+    },
+    redirectOnMissing: true
+  })
+
+  const handle2FASubmit = async (token: string) => {
+    await originalHandle2FASubmit(token)
+  }
 
   useEffect(() => {
     const fetchCurrencies = async () => {
@@ -59,47 +78,62 @@ export default function AddRateModal({ open, onClose, onSuccess }: AddRateModalP
     }
 
     if (!quoteCurrency || quoteCurrency === "") {
-        toast.error("Quote currency is required.")
-        setIsLoading(false)
-        return
-    }
-
-    try {
-      
-
-
-      await post("/admin/pair/prices", {
-        base_currency: baseCurrency,
-        quote_currency: quoteCurrency,
-        hasCrypto: hasCrypto,
-        referencePrice: referencePrice || "",
-        markup: parseFloat(markup) || 0,
-        markdown: parseFloat(markdown) || 0,
-        status: status
-      })
-      toast.success("Pair Price Rate created successfully")
-      onSuccess()
-      
-      
-      // Reset form
-      setStatus("active")
-      setBaseCurrency("")
-      setQuoteCurrency("")
-      setHasCrypto(false)
-      setReferencePrice("")
-      setMarkup("0")
-      setMarkdown("0")
-    } catch (error) {
-      console.error("Error creating rate:", error)
-      // toast.error("Failed to create rate")
-    } finally {
+      toast.error("Quote currency is required.")
       setIsLoading(false)
+      return
     }
+
+    const rateData = {
+      base_currency: baseCurrency,
+      quote_currency: quoteCurrency,
+      hasCrypto: hasCrypto,
+      referencePrice: referencePrice || "",
+      markup: parseFloat(markup) || 0,
+      markdown: parseFloat(markdown) || 0,
+      status: status
+    }
+
+    await requireTwoFactorAuth(rateData, async (data: any, token?: string) => {
+      try {
+        const response = await post("/admin/pair/prices", { ...data, token })
+        if (response.status === 201) {
+
+          setShow2FAModal(false)
+          toast.success("Pair Price Rate created successfully")
+          onSuccess()
+          
+          // Reset form
+          setStatus("active")
+          setBaseCurrency("")
+          setQuoteCurrency("")
+          setHasCrypto(false)
+          setReferencePrice("")
+          setMarkup("0")
+          setMarkdown("0")
+        } else {
+          // toast.error("Failed to create rate")
+        }
+      } catch (error) {
+        console.error("Error creating rate:", error)
+        // toast.error("Failed to create rate")
+      } finally {
+        setIsLoading(false)
+      }
+    })
   }
 
   return (
     <>
       <ProgressBar isLoading={isLoading} />
+
+      <TwoFactorAuthDialog
+        open={show2FAModal}
+        onOpenChange={setShow2FAModal}
+        onSubmit={handle2FASubmit}
+        isLoading={twoFALoading}
+      />
+
+
       <Dialog open={open} onOpenChange={onClose}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>

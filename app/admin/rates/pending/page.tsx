@@ -23,9 +23,9 @@ import {
 import { Plus, Pencil, Trash2, Search, X } from "lucide-react"
 import toast from "react-hot-toast"
 import ProgressBar from "@/components/ProgressBar"
-import AddRateModal from "./components/add-rate-modal"
-import EditRateModal from "./components/edit-rate-modal"
-import DeleteRateModal from "./components/delete-rate-modal"
+import AddRateModal from "../components/add-rate-modal"
+import EditRateModal from "../components/approval-rate-modal"
+import DeleteRateModal from "../components/delete-rate-modal"
 
 
 interface Rate {
@@ -157,7 +157,6 @@ export default function RatesPage() {
     const markupAmount = baseRate * (rate.markup / 100)
     const markdownAmount = baseRate * (rate.markdown / 100)
     const finalRate = baseRate + markupAmount - markdownAmount
-    
     return `1 ${rate.base_currency} = ${finalRate.toFixed(8)} ${rate.quote_currency}`
   }
 
@@ -167,14 +166,7 @@ export default function RatesPage() {
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
           <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-semibold text-gray-900">Rates Management</h1>
-            <Button
-              onClick={() => setShowAddModal(true)}
-              className="bg-sky-500 hover:bg-sky-600"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Rate
-            </Button>
+            <h1 className="text-2xl font-semibold text-gray-900">Pending Rates Management</h1>
           </div>
         </div>
 
@@ -182,8 +174,6 @@ export default function RatesPage() {
           <div className="py-4">
             <Card className="p-4 mb-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
@@ -193,8 +183,6 @@ export default function RatesPage() {
                     className="pl-10"
                   />
                 </div>
-
-
                 <Select value={currencyFilter} onValueChange={setCurrencyFilter}>
                   <SelectTrigger>
                     <SelectValue placeholder="Filter by base currency" />
