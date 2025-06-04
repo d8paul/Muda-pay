@@ -150,86 +150,30 @@ export default function EditRateModal({ open, onClose, onSuccess, rate, fetchRat
       <Dialog open={open} onOpenChange={() => onClose(true)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Edit Rate</DialogTitle>
+            <DialogTitle> Rate Approval </DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="baseCurrency">Base Currency </Label>
-                <p>{baseCurrency}</p>
-              </div>
 
+              </div>
               <div className="space-y-2">
-                <Label htmlFor="quoteCurrency">Quote Currency</Label>
-                <p>{quoteCurrency}</p>
+                <Label htmlFor="status">Status</Label>
+                <Select
+                  value={status}
+                  onValueChange={(value: "approved" | "rejected") => setStatus(value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="approved">Approve</SelectItem>
+                    <SelectItem value="rejected">Reject</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="hasCrypto"
-                checked={hasCrypto}
-                onCheckedChange={setHasCrypto}
-              />
-              <Label htmlFor="hasCrypto">Has Crypto</Label>
-            </div>
-
-            
-            <div className="space-y-2">
-                <Label htmlFor="referencePrice">Reference Price</Label>
-                <Input
-                  id="referencePrice"
-                  type="number"
-                  step="0.00000001"
-                  min="0"
-                  value={referencePrice}
-                  onChange={(e) => setReferencePrice(e.target.value)}
-                  placeholder="Enter reference price"
-                />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="markup">Markup (%)</Label>
-                <Input
-                  id="markup"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={markup}
-                  onChange={(e) => setMarkup(e.target.value)}
-                  placeholder="Enter markup percentage"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="markdown">Markdown (%)</Label>
-                <Input
-                  id="markdown"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={markdown}
-                  onChange={(e) => setMarkdown(e.target.value)}
-                  placeholder="Enter markdown percentage"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Select
-                value={status}
-                onValueChange={(value: "active" | "inactive") => setStatus(value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
             <div className="flex justify-end space-x-2">
