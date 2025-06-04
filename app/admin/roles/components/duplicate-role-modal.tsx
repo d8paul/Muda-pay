@@ -86,7 +86,7 @@ export default function DuplicateRoleModal({ open, onClose, onSuccess, role }: D
         name,
         details,
         status,
-        access_rights: selectedRights.map(id => ({ role_access_rights_id: id })),
+        access_right: selectedRights,
       })
 
       toast.success("Role duplicated successfully")

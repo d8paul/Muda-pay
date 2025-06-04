@@ -11,7 +11,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { LockIcon, ShieldCheckIcon } from "lucide-react"
+import { ShieldCheckIcon } from "lucide-react"
+import { post } from "@/utils/api"
 
 interface TwoFactorAuthDialogProps {
   open: boolean;
@@ -27,62 +28,46 @@ export default function TwoFactorAuthDialog({
   isLoading,
 }: TwoFactorAuthDialogProps) {
   const [twoFAToken, setTwoFAToken] = useState("")
-  const [formattedToken, setFormattedToken] = useState("")
   const [error, setError] = useState(false)
-  const [countdown, setCountdown] = useState(30)
 
   // Reset state when dialog opens/closes
   useEffect(() => {
     if (open) {
       setTwoFAToken("")
-      setFormattedToken("")
       setError(false)
-      setCountdown(30)
     }
   }, [open])
 
-  // Create countdown timer for token expiration
-  useEffect(() => {
-    let timer: NodeJS.Timeout | null = null;
-    
-    if (open && countdown > 0) {
-      timer = setInterval(() => {
-        setCountdown(prev => prev - 1);
-      }, 1000);
-    }
-    
-    return () => {
-      if (timer) clearInterval(timer);
-    };
-  }, [open, countdown]);
-
-  // Handle token input with formatting
+  // Handle token input
   const handleTokenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, '').substring(0, 6)
     setTwoFAToken(value)
-    
-    // Format with space after 3 digits
-    if (value.length > 3) {
-      setFormattedToken(`${value.substring(0, 3)} ${value.substring(3)}`)
-    } else {
-      setFormattedToken(value)
-    }
-    
-    // Auto-submit when 6 digits entered
-    if (value.length === 6) {
-      handleSubmit()
-    }
-    
-    // Reset error state when typing
-    if (error) setError(false)
+    setError(false) // Reset error state when typing
   }
 
-  const handleSubmit = () => {
-    if (twoFAToken.length !== 6) {
+  const verifyToken = async (token: string) => {
+    if (token.length !== 6) {
       setError(true)
       return
     }
-    onSubmit(twoFAToken)
+
+    try {
+      const response = await post("/admin/users/2fa/verify/code", { token });
+      // Check if the response indicates success
+      if (response.data?.status === true) {
+        onSubmit(token);
+        onOpenChange(false); // Close the dialog on successful verification
+      } else {
+        throw new Error(response.message || 'Verification failed');
+      }
+    } catch (error) {
+      console.error('Error verifying 2FA code:', error);
+      setError(true);
+    }
+  }
+
+  const handleSubmit = () => {
+    verifyToken(twoFAToken)
   }
 
   return (
@@ -98,34 +83,21 @@ export default function TwoFactorAuthDialog({
           </p>
         </DialogHeader>
         <div className="flex flex-col items-center space-y-4 py-4">
-          {countdown > 0 && (
-            <div className="text-xs text-gray-500 flex items-center">
-              <LockIcon className="h-3 w-3 mr-1" /> Code expires in {countdown}s
-            </div>
-          )}
           <div className="w-full">
             <Input
               type="text"
-              value={formattedToken}
+              value={twoFAToken}
               onChange={handleTokenChange}
-              placeholder="000 000"
+              placeholder="000000"
               className={`text-center text-xl tracking-widest ${error ? 'border-red-500 focus:ring-red-500' : ''}`}
               autoFocus
               inputMode="numeric"
-              maxLength={7} // 6 digits + 1 space
+              maxLength={6}
             />
             {error && (
               <p className="mt-1 text-xs text-red-500">Please enter a valid 6-digit code</p>
             )}
           </div>
-          
-          {countdown === 0 && (
-            <Alert variant="destructive" className="mt-2">
-              <AlertDescription>
-                Time expired. Please request a new code or refresh the page.
-              </AlertDescription>
-            </Alert>
-          )}
         </div>
         <DialogFooter>
           <Button

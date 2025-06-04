@@ -63,9 +63,9 @@ export function useTwoFactorAuth(options: Use2FAOptions = {}) {
       setShow2FAModal(false)
       setPendingAction(null)
       options.onSuccess?.()
-    } catch (error) {
+    } catch (error: any) {
       console.error("2FA verification failed:", error)
-      toast.error("2FA verification failed")
+      toast.error(error.message || "2FA verification failed")
       options.onError?.(error)
     } finally {
       setIsLoading(false)

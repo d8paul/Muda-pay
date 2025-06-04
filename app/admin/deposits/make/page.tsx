@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import toast from "react-hot-toast"
 import ProgressBar from "@/components/ProgressBar"
 import { get, post } from "@/utils/api"
@@ -23,10 +24,7 @@ export default function MakeDepositPage() {
     narration: "",
     depositReference: "",
   })
-  const [searchTerm, setSearchTerm] = useState("")
   const [clients, setClients] = useState<Client[]>([])
-  const [filteredClients, setFilteredClients] = useState<Client[]>([])
-  const [showDropdown, setShowDropdown] = useState(false)
   const [twoFactorStatus, setTwoFactorStatus] = useState<string | null>(null)
   
   const { 
@@ -44,14 +42,12 @@ export default function MakeDepositPage() {
         narration: "",
         depositReference: "",
       })
-      setSearchTerm("")
-      setShowDropdown(false)
     },
     redirectOnMissing: true
   })
   
   const isLoading = localLoading || twoFALoading
-  
+
   useEffect(() => {
     // Check 2FA status on page load
     const checkTwoFactorStatus = async () => {
@@ -73,37 +69,22 @@ export default function MakeDepositPage() {
 
   useEffect(() => {
     const fetchClients = async () => {
-      if (searchTerm.trim() === "") {
-        setFilteredClients([])
-        setShowDropdown(false)
-        return
-      }
-
       setLocalLoading(true)
       try {
-        const response = await get(`/admin/clients/${searchTerm}`)
+        const response = await get("/admin/clients")
         if (response.status === 200) {
-          setClients([response.data])
-          setFilteredClients([response.data])
-          setShowDropdown(true)
+          setClients(response.data)
         }
       } catch (error) {
         console.error("Error fetching clients:", error)
-        setShowDropdown(false)
+        toast.error("Failed to load clients")
       } finally {
         setLocalLoading(false)
       }
     }
 
-    // Debounce search to avoid unnecessary API calls
-    const debounceTimeout = setTimeout(() => {
-      if (searchTerm.trim()) {
-        fetchClients();
-      }
-    }, 300);
-
-    return () => clearTimeout(debounceTimeout);
-  }, [searchTerm])
+    fetchClients()
+  }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -113,11 +94,18 @@ export default function MakeDepositPage() {
     }))
   }
 
+  const handleWalletIdChange = (value: string) => {
+    setFormData((prevData) => ({
+      ...prevData,
+      walletId: value,
+    }))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     const depositData = {
-      clientId: formData.walletId,
+      client_id: formData.walletId,
       amount: parseFloat(formData.amount),
       currency: "UGX",
       product_id: "10000",
@@ -167,41 +155,23 @@ export default function MakeDepositPage() {
             <form onSubmit={handleSubmit} className="space-y-6 bg-white shadow px-4 py-5 sm:rounded-lg sm:p-6">
               <div>
                 <Label htmlFor="walletId">Wallet ID</Label>
-                <div className="mt-1 relative">
-                  <div className="relative">
-                    <Input
-                      type="text"
-                      name="walletId"
-                      id="walletId"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="Search for wallet ID or client name"
-                      className={`w-full ${localLoading ? 'pr-10' : ''}`}
-                      disabled={localLoading}
-                    />
-                    {localLoading && (
-                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                        <div className="h-4 w-4 border-2 border-t-transparent border-blue-500 rounded-full animate-spin"></div>
-                      </div>
-                    )}
-                  </div>
-                  {showDropdown && filteredClients.length > 0 && (
-                    <ul className="mt-2 border border-gray-300 rounded-md max-h-40 overflow-auto absolute z-10 bg-white w-full">
-                      {filteredClients.map((client) => (
-                        <li
-                          key={client.client_id}
-                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                          onClick={() => {
-                            setFormData((prevData) => ({ ...prevData, walletId: client.client_id }))
-                            setSearchTerm(`${client.client_id} - ${client.business_name}`)
-                            setShowDropdown(false)
-                          }}
-                        >
+                <div className="mt-1">
+                  <Select
+                    value={formData.walletId}
+                    onValueChange={handleWalletIdChange}
+                    disabled={localLoading}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select a client" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clients.map((client) => (
+                        <SelectItem key={client.client_id} value={client.client_id}>
                           {client.client_id} - {client.business_name}
-                        </li>
+                        </SelectItem>
                       ))}
-                    </ul>
-                  )}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

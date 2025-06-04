@@ -80,7 +80,7 @@ export default function EditRoleModal({ open, onClose, onSuccess, role }: EditRo
         name,
         details,
         status,
-        access_rights: selectedRights.map(id => ({ role_access_rights_id: id })),
+        access_right: selectedRights,
       })
 
       toast.success("Role updated successfully")
