@@ -307,8 +307,8 @@ export default function RatesPage() {
               setSelectedRate(null)
             }}
             rate={selectedRate}
+            fetchRates={fetchRates}
             onSuccess={() => {
-
               setShowEditModal(false)
               setSelectedRate(null)
               fetchRates()
@@ -321,8 +321,7 @@ export default function RatesPage() {
               setShowDeleteModal(false)
               setSelectedRate(null)
             }}
-            rate={selectedRate}
-            onSuccess={() => {
+            onConfirm={() => {
               setShowDeleteModal(false)
               setSelectedRate(null)
               fetchRates()
