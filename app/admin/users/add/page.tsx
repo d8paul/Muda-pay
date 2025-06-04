@@ -12,9 +12,24 @@ import { post, get } from "@/utils/api"
 import { useTwoFactorAuth } from "@/hooks/useTwoFactorAuth"
 import TwoFactorAuthDialog from "@/components/TwoFactorAuthDialog"
 
+interface Role {
+  id: string
+  name: string
+}
+
 export default function AddUserPage() {
   const router = useRouter()
   const [localLoading, setLocalLoading] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
+  const [sortField, setSortField] = useState("name")
+  const [sortOrder, setSortOrder] = useState("asc")
+  const [nameFilter, setNameFilter] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [rightsFilter, setRightsFilter] = useState("all")
+  const [roles, setRoles] = useState<Role[]>([])
+  const [filteredRoles, setFilteredRoles] = useState<Role[]>([])
+  const [totalItems, setTotalItems] = useState(0)
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -56,7 +71,43 @@ export default function AddUserPage() {
     }
     
     checkTwoFactorStatus()
+    fetchRoles()
   }, [])
+
+
+  const fetchRoles = async () => {
+    try {
+      setLocalLoading(true)
+      const response = await get("/admin/roles", {
+        params: {
+          page: currentPage,
+          limit: itemsPerPage,
+          sort_by: sortField,
+          sort_order: sortOrder,
+          name: nameFilter || undefined,
+          status: statusFilter !== "all" ? statusFilter : undefined,
+          access_right: rightsFilter !== "all" ? rightsFilter : undefined,
+        },
+      })
+      if (response && Array.isArray(response.data)) {
+        setRoles(response.data)
+        setFilteredRoles(response.data)
+        setTotalItems(response.total || response.data.length)
+      } else {
+        console.error("Invalid response format:", response)
+        toast.error("Invalid response format from server")
+        setRoles([])
+        setFilteredRoles([])
+      }
+    } catch (error) {
+      console.error("Error fetching roles:", error)
+      toast.error("Failed to fetch roles")
+      setRoles([])
+      setFilteredRoles([])
+    } finally {
+      setLocalLoading(false)
+    }
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -158,8 +209,11 @@ export default function AddUserPage() {
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="approver">Approver</SelectItem>
-                  <SelectItem value="verifier">Verifier</SelectItem>
+                  {roles.map((role: any) => (
+                    <SelectItem key={role.id} value={role.id}>
+                      {role.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
