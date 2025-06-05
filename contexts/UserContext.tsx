@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, ReactNode } from 'react'
+import { createContext, useContext, useState, ReactNode, useEffect } from 'react'
 import { get } from '@/utils/api'
 
 export type Permission = 
@@ -34,6 +34,7 @@ export type User = {
 
 type UserContextType = {
   user: User | null
+  loading: boolean
   setUser: (user: User | null) => void
   fetchUserProfile: () => Promise<void>
 }
@@ -42,9 +43,11 @@ export const UserContext = createContext<UserContextType | undefined>(undefined)
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
 
   const fetchUserProfile = async () => {
     try {
+      setLoading(true)
       const response = await get('/admin/users/profile')
       console.log("User profile response:", response)
       if (response.status === 201) {
@@ -53,11 +56,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Error fetching user profile:', error)
       setUser(null)
+    } finally {
+      setLoading(false)
     }
   }
 
+  useEffect(() => {
+    fetchUserProfile()
+  }, [])
+
   return (
-    <UserContext.Provider value={{ user, setUser, fetchUserProfile }}>
+    <UserContext.Provider value={{ user, loading, setUser, fetchUserProfile }}>
       {children}
     </UserContext.Provider>
   )

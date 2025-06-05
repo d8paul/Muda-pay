@@ -46,9 +46,18 @@ const menuItems = [
     submenu: [
       { name: "Users List", path: "/admin/users/list" },
       { name: "Add User", path: "/admin/users/add" },
+      { name: "Pending Users", path: "/admin/users/pending" },
     ],
   },
-  { name: "Roles", icon: UsersIcon, path: "/admin/roles" },
+  {
+    name: "Roles",
+    icon: UsersIcon,
+    submenu: [
+      { name: "All Roles", path: "/admin/roles" },
+      { name: "Add Role", path: "/admin/roles/add" },
+      { name: "Pending Roles", path: "/admin/roles/pending" },
+    ],
+  },
   {
     name: "Rates",
     icon: CurrencyDollarIcon,

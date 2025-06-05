@@ -26,8 +26,15 @@ import ProgressBar from "@/components/ProgressBar"
 import AddRoleModal from "./components/add-role-modal"
 import EditRoleModal from "./components/edit-role-modal"
 import DeleteRoleModal from "./components/delete-role-modal"
-import ViewRoleModal from "./components/view-role-modal"
 import DuplicateRoleModal from "./components/duplicate-role-modal"
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Badge } from "@/components/ui/badge"
 
 interface Role {
   id: string
@@ -441,5 +448,131 @@ export default function RolesPage() {
         </>
       )}
     </>
+  )
+}
+
+interface ViewRoleModalProps {
+  open: boolean
+  onClose: () => void
+  roleId: string
+}
+
+function ViewRoleModal({ open, onClose, roleId }: ViewRoleModalProps) {
+  const [role, setRole] = useState<Role | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    if (open && roleId) {
+      fetchRoleDetails()
+    }
+  }, [open, roleId])
+
+  const fetchRoleDetails = async () => {
+    try {
+      setIsLoading(true)
+      const response = await get(`/admin/roles/${roleId}`)
+      if (response.status === 200) {
+        setRole(response.data)
+      }
+    } catch (error) {
+      console.error("Error fetching role details:", error)
+      toast.error("Failed to fetch role details")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden">
+        <DialogHeader>
+          <DialogTitle>Role Details</DialogTitle>
+        </DialogHeader>
+        <ProgressBar isLoading={isLoading} />
+        {role && (
+          <div className="max-h-[calc(80vh-8rem)] overflow-y-auto">
+            <div className="space-y-8">
+              {/* Basic Information Group */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-base font-semibold text-gray-900 mb-4">Basic Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Name</p>
+                      <p className="text-sm text-gray-900">{role.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Details</p>
+                      <p className="text-sm text-gray-900">{role.details || "-"}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Status</p>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          role.status === "active"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {role.status}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Access Rights Group */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-base font-semibold text-gray-900 mb-4">Access Rights</h3>
+                <div className="flex flex-wrap gap-2">
+                  {role.access_rights.map((right) => (
+                    <Badge 
+                      key={right.role_access_rights_id} 
+                      variant="secondary"
+                      className="text-xs"
+                    >
+                      {right.name}
+                      {right.access_rights_status !== "active" && (
+                        <span className="ml-1 text-red-500">({right.access_rights_status})</span>
+                      )}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              {/* Timeline Group */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-base font-semibold text-gray-900 mb-4">Timeline</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-gray-500">Created</p>
+                    <p className="text-sm text-gray-900">{new Date(role.created_at).toLocaleString()}</p>
+                  </div>
+                  {role.updated_at && (
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-gray-500">Last Updated</p>
+                      <p className="text-sm text-gray-900">{new Date(role.updated_at).toLocaleString()}</p>
+                    </div>
+                  )}
+                  {role.deleted_at && (
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-gray-500">Deleted</p>
+                      <p className="text-sm text-gray-900">{new Date(role.deleted_at).toLocaleString()}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 } 
