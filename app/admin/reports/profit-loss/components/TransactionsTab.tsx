@@ -262,8 +262,8 @@ const TransactionsTab = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Date</TableHead>
-              <TableHead>Send</TableHead>
-              <TableHead>Receive</TableHead>
+              <TableHead>From Amount</TableHead>
+              <TableHead>To Amount</TableHead>
               <TableHead>Spread</TableHead>
               <TableHead>Profit in pair</TableHead>
               <TableHead>Exchange Rate</TableHead>
