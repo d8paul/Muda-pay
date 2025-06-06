@@ -298,7 +298,6 @@ const TransactionsTab = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Date</TableHead>
-              <TableHead>Transaction ID</TableHead>
               <TableHead>Send</TableHead>
               <TableHead>Receive</TableHead>
               <TableHead>Provider</TableHead>
@@ -311,7 +310,7 @@ const TransactionsTab = () => {
           <TableBody>
             {transactions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                   No transactions found
                 </TableCell>
               </TableRow>
@@ -323,7 +322,6 @@ const TransactionsTab = () => {
                   onClick={() => setSelectedTransaction(transaction)}
                 >
                   <TableCell>{formatDate(transaction.created_on)}</TableCell>
-                  <TableCell className="font-mono text-sm">{transaction.transId}</TableCell>
                   <TableCell>
                     {transaction.send_amount} {transaction.send_asset}
                   </TableCell>

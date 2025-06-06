@@ -27,7 +27,6 @@ import AddRateModal from "./components/add-rate-modal"
 import EditRateModal from "./components/edit-rate-modal"
 import DeleteRateModal from "./components/delete-rate-modal"
 
-
 interface Rate {
   id: string
   status: "active" | "inactive"
@@ -46,18 +45,7 @@ interface CurrencyOption {
 }
 
 export default function RatesPage() {
-  const [rates, setRates] = useState<Rate[]>([
-    // {
-    //   id: "rate_123",
-    //   status: "active",
-    //   base_currency: "UGX",
-    //   quote_currency: "USDT",
-    //   hasCrypto: true,
-    //   referencePrice: "3800.50",
-    //   markup: 2.5,
-    //   markdown: 0.5
-    // }
-  ])
+  const [rates, setRates] = useState<Rate[]>([])
   const [filteredRates, setFilteredRates] = useState<Rate[]>([])
   const [currencyOptions, setCurrencyOptions] = useState<CurrencyOption[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -74,7 +62,7 @@ export default function RatesPage() {
   const fetchRates = async () => {
     try {
       setIsLoading(true)
-      const response = await get("/admin/pair/prices")
+      const response = await get(`/admin/pair/prices?quote_currency=${currencyFilter}&search=${nameFilter}`)
       if (response && Array.isArray(response.data)) {
         setRates(response.data)
         setFilteredRates(response.data)
@@ -96,7 +84,7 @@ export default function RatesPage() {
 
   useEffect(() => {
     fetchRates()
-  }, [])
+  }, [nameFilter, currencyFilter])
 
   useEffect(() => {
     let filtered = [...rates]
@@ -114,8 +102,13 @@ export default function RatesPage() {
       filtered = filtered.filter((rate) => rate.status === statusFilter)
     }
 
+    // Apply currency filter
+    if (currencyFilter !== "all") {
+      filtered = filtered.filter((rate) => rate.base_currency === currencyFilter)
+    }
+
     setFilteredRates(filtered)
-  }, [rates, nameFilter, statusFilter])
+  }, [rates, nameFilter, statusFilter, currencyFilter])
 
   useEffect(() => {
     const fetchCurrencies = async () => {
@@ -177,25 +170,22 @@ export default function RatesPage() {
           <div className="py-4">
             <Card className="p-4 mb-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
-                    placeholder="Search by name..."
+                    placeholder="Search by base currency or quote currency..."
                     value={nameFilter}
                     onChange={(e) => setNameFilter(e.target.value)}
                     className="pl-10"
                   />
                 </div>
-
-
                 <Select value={currencyFilter} onValueChange={setCurrencyFilter}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Filter by currency" />
+                    <SelectValue placeholder="Filter by base currency" />
                   </SelectTrigger>
                   <SelectContent>
-                     {currencyOptions.map(opt => (
+                    <SelectItem value="all">Default Pairs</SelectItem>
+                    {currencyOptions.map(opt => (
                       <SelectItem key={opt.asset_code} value={opt.asset_code}>
                         {opt.asset_code} ({opt.currency})
                       </SelectItem>
@@ -222,7 +212,7 @@ export default function RatesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Exchange Rate</TableHead>
+                    <TableHead>Pairs</TableHead>
                         <TableHead>Markup (%)</TableHead>
                         <TableHead>Markdown (%)</TableHead>
                         <TableHead>Buy Price</TableHead>
@@ -231,10 +221,10 @@ export default function RatesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredRates.map((rate) => (
+                  {!isLoading && filteredRates.map((rate) => (
                     <TableRow key={rate.id}>
                       <TableCell>
-                       {rate.base_currency} 
+                       {rate.base_currency}/{rate.quote_currency}
                       </TableCell>
                       <TableCell>{rate.markup}%</TableCell>
                       <TableCell>{rate.markdown}%</TableCell>
@@ -257,10 +247,19 @@ export default function RatesPage() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {filteredRates.length === 0 && (
+
+                  {!isLoading && filteredRates.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-4">
                         No rates found
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  
+                  {isLoading && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-4">
+                        Loading Pair Prices
                       </TableCell>
                     </TableRow>
                   )}
@@ -284,11 +283,12 @@ export default function RatesPage() {
         <>
           <EditRateModal
             open={showEditModal}
-            onClose={() => {
-              setShowEditModal(false)
+            onClose={(option: any) => {
+              setShowEditModal(option)
               setSelectedRate(null)
             }}
             rate={selectedRate}
+            fetchRates={fetchRates}
             onSuccess={() => {
               setShowEditModal(false)
               setSelectedRate(null)
@@ -302,8 +302,7 @@ export default function RatesPage() {
               setShowDeleteModal(false)
               setSelectedRate(null)
             }}
-            rate={selectedRate}
-            onSuccess={() => {
+            onConfirm={() => {
               setShowDeleteModal(false)
               setSelectedRate(null)
               fetchRates()

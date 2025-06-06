@@ -14,19 +14,19 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ShieldCheckIcon } from "lucide-react"
 import { post } from "@/utils/api"
 
-interface TwoFactorAuthDialogProps {
+interface LoginTwoFactorAuthDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (token: string) => void;
   isLoading: boolean;
 }
 
-export default function TwoFactorAuthDialog({
+export default function LoginTwoFactorAuthDialog({
   open,
   onOpenChange,
   onSubmit,
   isLoading,
-}: TwoFactorAuthDialogProps) {
+}: LoginTwoFactorAuthDialogProps) {
   const [twoFAToken, setTwoFAToken] = useState("")
   const [error, setError] = useState(false)
 
@@ -45,29 +45,12 @@ export default function TwoFactorAuthDialog({
     setError(false) // Reset error state when typing
   }
 
-  const verifyToken = async (token: string) => {
-    if (token.length !== 6) {
+  const handleSubmit = () => {
+    if (twoFAToken.length !== 6) {
       setError(true)
       return
     }
-
-    try {
-      const response = await post("/admin/users/2fa/verify/code", { token });
-      // Check if the response indicates success
-      if (response.data?.status === true) {
-        onSubmit(token);
-        onOpenChange(false); // Close the dialog on successful verification
-      } else {
-        throw new Error(response.message || 'Verification failed');
-      }
-    } catch (error) {
-      console.error('Error verifying 2FA code:', error);
-      setError(true);
-    }
-  }
-
-  const handleSubmit = () => {
-    verifyToken(twoFAToken)
+    onSubmit(twoFAToken)
   }
 
   return (

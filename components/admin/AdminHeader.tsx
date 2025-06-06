@@ -10,6 +10,8 @@ export default function AdminHeader() {
   const router = useRouter()
   const { user, loading } = useUser()
 
+  console.log("User in header",user)
+
   const handleLogout = () => {
     // Clear session data
     localStorage.clear()

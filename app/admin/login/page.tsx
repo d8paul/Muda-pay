@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import TwoFactorAuthDialog from "@/components/TwoFactorAuthDialog"
+import LoginTwoFactorAuthDialog from "@/components/LoginTwoFactorAuthDialog"
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("")
@@ -50,6 +50,7 @@ export default function AdminLoginPage() {
   const handle2FASubmit = async (token: string) => {
     setIsLoading(true)
     try {
+      // Call login/confirm endpoint with credentials and 2FA token
       const response = await post("/admin/login/confirm", {
         email,
         password,
@@ -134,7 +135,7 @@ export default function AdminLoginPage() {
         </div>
       </div>
 
-      <TwoFactorAuthDialog 
+      <LoginTwoFactorAuthDialog 
         open={show2FAModal} 
         onOpenChange={setShow2FAModal} 
         onSubmit={handle2FASubmit} 

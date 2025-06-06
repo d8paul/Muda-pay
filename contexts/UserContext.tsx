@@ -1,78 +1,72 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react"
-import { get } from "@/utils/api"
+import { createContext, useContext, useState, ReactNode, useEffect } from 'react'
+import { get } from '@/utils/api'
 
-interface UserProfile {
+export type Permission = 
+  | 'Create New account'
+  | 'Add Float'
+  | 'Maker'
+  | 'Checker'
+  | 'Changing rates'
+  | 'Add Business Account'
+  | 'Add Admin Account'
+
+export type RoleDetails = {
+  id: number | null
+  name: string | null
+  details: string | null
+  status: string | null
+  access_rights: string[]
+}
+
+export type User = {
   id: number
   first_name: string
   last_name: string
   email: string
   role: string
+  role_details: RoleDetails
   status: string
-  deleted_at: string | null
   updated_at: string
   created_at: string
-  two_factor_enabled: boolean
 }
 
-interface UserContextType {
-  user: UserProfile | null
+type UserContextType = {
+  user: User | null
   loading: boolean
-  error: string | null
+  setUser: (user: User | null) => void
   fetchUserProfile: () => Promise<void>
-  checkTwoFactorStatus: () => Promise<boolean>
 }
 
-const UserContext = createContext<UserContextType | undefined>(undefined)
+export const UserContext = createContext<UserContextType | undefined>(undefined)
 
 export function UserProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<UserProfile | null>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
   const fetchUserProfile = async () => {
     try {
       setLoading(true)
-      setError(null)
-      const response = await get("/admin/users/profile")
+      const response = await get('/admin/users/profile')
+      console.log("User profile response:", response)
       if (response.status === 201) {
         setUser(response.data)
-      } else {
-        throw new Error(response.message || "Failed to fetch user profile")
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch user profile")
+    } catch (error) {
+      console.error('Error fetching user profile:', error)
+      setUser(null)
     } finally {
       setLoading(false)
     }
   }
 
-  const checkTwoFactorStatus = async (): Promise<boolean> => {
-    try {
-      const response = await get("/admin/users/2fa/status")
-      console.log("2FA status response:", response)
-      if (response.status === 201) {
-        return response.data.status === "active"
-      }
-      return false
-    } catch (err) {
-      console.error("Error checking 2FA status:", err)
-      return false
-    }
-  }
-
   useEffect(() => {
-    const token = localStorage.getItem("token")
-    if (token) {
-      fetchUserProfile()
-    } else {
-      setLoading(false)
-    }
+    fetchUserProfile()
   }, [])
 
   return (
-    <UserContext.Provider value={{ user, loading, error, fetchUserProfile, checkTwoFactorStatus }}>
+    <UserContext.Provider value={{ user, loading, setUser, fetchUserProfile }}>
       {children}
     </UserContext.Provider>
   )
@@ -81,7 +75,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 export function useUser() {
   const context = useContext(UserContext)
   if (context === undefined) {
-    throw new Error("useUser must be used within a UserProvider")
+    throw new Error('useUser must be used within a UserProvider')
   }
   return context
 } 

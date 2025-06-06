@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { put, get } from "@/utils/api"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -16,10 +17,12 @@ import {
 import { Switch } from "@/components/ui/switch"
 import toast from "react-hot-toast"
 import ProgressBar from "@/components/ProgressBar"
+import TwoFactorAuthDialog from "@/components/TwoFactorAuthDialog"
+import { useTwoFactorAuth } from "@/hooks/useTwoFactorAuth"
 
 interface Rate {
   id: string
-  status: "active" | "inactive"
+  status: "active" | "inactive" | "pending"
   base_currency: string
   quote_currency: string
   hasCrypto: boolean
@@ -35,13 +38,15 @@ interface CurrencyOption {
 
 interface EditRateModalProps {
   open: boolean
-  onClose: () => void
+  onClose: (option?: boolean) => void
   onSuccess: () => void
   rate: Rate | null
+  fetchRates: () => Promise<void>
 }
 
-export default function EditRateModal({ open, onClose, onSuccess, rate }: EditRateModalProps) {
-  const [status, setStatus] = useState<"active" | "inactive">("active")
+export default function EditRateModal({ open, onClose, onSuccess, rate, fetchRates }: EditRateModalProps) {
+  const router = useRouter()
+  const [status, setStatus] = useState<"active" | "inactive" | "pending">("active")
   const [baseCurrency, setBaseCurrency] = useState("UGX")
   const [quoteCurrency, setQuoteCurrency] = useState("USDT")
   const [hasCrypto, setHasCrypto] = useState(false)
@@ -50,9 +55,25 @@ export default function EditRateModal({ open, onClose, onSuccess, rate }: EditRa
   const [markdown, setMarkdown] = useState("0")
   const [isLoading, setIsLoading] = useState(false)
   const [currencyOptions, setCurrencies] = useState<CurrencyOption[]>([])
+  const [twoFactorStatus, setTwoFactorStatus] = useState<string | null>(null)
 
+  const { 
+    show2FAModal, 
+    setShow2FAModal,
+    isLoading: twoFALoading, 
+    requireTwoFactorAuth,
+    handle2FASubmit: originalHandle2FASubmit 
+  } = useTwoFactorAuth({
+    onSuccess: (token?: string) => {
+      // onSuccess()
+    },
+    redirectOnMissing: true
+  })
 
-  
+  const handle2FASubmit = async (token: string) => {
+    await originalHandle2FASubmit(token)
+  }
+
   useEffect(() => {
     const fetchCurrencies = async () => {
       try {
@@ -66,7 +87,6 @@ export default function EditRateModal({ open, onClose, onSuccess, rate }: EditRa
     fetchCurrencies()
   }, [])
 
-  
   useEffect(() => {
     if (rate) {
       setStatus(rate.status)
@@ -83,32 +103,45 @@ export default function EditRateModal({ open, onClose, onSuccess, rate }: EditRa
     e.preventDefault()
     if (!rate) return
 
-    setIsLoading(true)
-
-    try {
-      await put(`/admin/pair/prices/${rate.id}`, {
-        status,
-        base_currency: baseCurrency,
-        quote_currency: quoteCurrency,
-        hasCrypto,
-        referencePrice: referencePrice || null,
-        markup: parseFloat(markup) || 0,
-        markdown: parseFloat(markdown) || 0,
-      })
-
-      toast.success("Rate updated successfully")
-      onSuccess()
-    } catch (error) {
-      console.error("Error updating rate:", error)
-    } finally {
-      setIsLoading(false)
+    const rateData = {
+      referencePrice: referencePrice || "",
+      markup: parseFloat(markup) || 0,
+      markdown: parseFloat(markdown) || 0
     }
+
+    await requireTwoFactorAuth(rateData, async (data: any, token?: string) => {
+      try {
+        const responseUpdate = await put(`/admin/pair/prices/${rate.id}`, { ...data, token })
+        if (responseUpdate.status === 200) {
+          setShow2FAModal(false)
+          onSuccess()
+          onClose(false)
+          toast.success("Rate updated successfully")
+          await fetchRates() // Refresh the rates list
+        } else {
+          setShow2FAModal(true)
+          onClose(true)
+        }
+      } catch (error) {
+        console.error("Error updating rate:", error)
+        toast.error("Failed to update rate")
+      }
+    })
   }
 
   return (
     <>
       <ProgressBar isLoading={isLoading} />
-      <Dialog open={open} onOpenChange={onClose}>
+
+      <TwoFactorAuthDialog
+        open={show2FAModal}
+        onOpenChange={setShow2FAModal}
+        onSubmit={handle2FASubmit}
+        isLoading={twoFALoading}
+      />
+
+      
+      <Dialog open={open} onOpenChange={() => onClose(true)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Edit Rate</DialogTitle>
@@ -181,7 +214,7 @@ export default function EditRateModal({ open, onClose, onSuccess, rate }: EditRa
               <Label htmlFor="status">Status</Label>
               <Select
                 value={status}
-                onValueChange={(value: "active" | "inactive") => setStatus(value)}
+                onValueChange={(value: "active" | "inactive" | "pending") => setStatus(value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select status" />
@@ -189,12 +222,13 @@ export default function EditRateModal({ open, onClose, onSuccess, rate }: EditRa
                 <SelectContent>
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="flex justify-end space-x-2">
-              <Button type="button" variant="outline" onClick={onClose}>
+              <Button type="button" variant="outline" onClick={() => onClose(false)}>
                 Cancel
               </Button>
               <Button type="submit" disabled={isLoading}>

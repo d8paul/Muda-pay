@@ -41,7 +41,6 @@ export default function DashboardPage() {
     { name: "Number of transactions", value: null, isCurrency: false, icon: "CreditCardIcon", iconColor: "text-blue-500", bgColor: "bg-blue-50" },
     { name: "Collections", value: null, isCurrency: true, icon: "ShoppingBagIcon", iconColor: "text-green-500", bgColor: "bg-green-50" },
     { name: "Payouts", value: null, isCurrency: true, icon: "ArrowDownCircleIcon", iconColor: "text-purple-500", bgColor: "bg-purple-50" },
-    { name: "Revenue", value: null, isCurrency: true, icon: "ArrowTrendingUpIcon", iconColor: "text-orange-500", bgColor: "bg-orange-50" },
   ]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -68,8 +67,6 @@ export default function DashboardPage() {
             return { ...stat, value: statsResponse.data.collections || 0 };
           } else if (stat.name === "Payouts") {
             return { ...stat, value: statsResponse.data.payouts || 0 };
-          } else if (stat.name === "Revenue") {
-            return { ...stat, value: (statsResponse.data.revenue - statsResponse.data.payouts) || 0 };
           }
           return stat;
         }));

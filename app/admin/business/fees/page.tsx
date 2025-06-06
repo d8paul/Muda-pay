@@ -235,13 +235,13 @@ export default function BusinessFeesPage() {
               </h1>
               <p className="text-gray-500 mt-1">Manage company transaction fees</p>
             </div>
-            <Button onClick={() => {
+            {/* <Button onClick={() => {
               resetForm()
               setActiveTab("create-fee")
             }}>
               <PlusIcon className="h-4 w-4 mr-2" />
               Add Fee
-            </Button>
+            </Button> */}
           </div>
         </div>
 
@@ -249,7 +249,7 @@ export default function BusinessFeesPage() {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="mb-6">
               <TabsTrigger value="view-fees">View Fees</TabsTrigger>
-              <TabsTrigger value="create-fee">{isEditing ? "Edit Fee" : "Create Fee"}</TabsTrigger>
+              <TabsTrigger value="create-fee">{isEditing ? "Edit Fee" : null}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="view-fees">

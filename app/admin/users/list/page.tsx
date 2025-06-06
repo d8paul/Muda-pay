@@ -11,14 +11,26 @@ import EditUserPage from "./edit_user"
 import { get } from "@/utils/api"
 import toast from "react-hot-toast"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
 
 export default function UsersListPage() {
   interface User {
     id: number
-    name: string
+    first_name: string
+    last_name: string
     email: string
     role: string
-    isActive: boolean
+    role_details: {
+      id: string | null
+      name: string | null
+      details: string | null
+      status: string | null
+      access_rights: any[]
+    }
+    status: string
+    updated_at: string
+    created_at: string
   }
 
   interface UserStats {
@@ -32,7 +44,9 @@ export default function UsersListPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false)
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null)
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
 
   const capitalize = (str: string) => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
 
@@ -45,20 +59,12 @@ export default function UsersListPage() {
         get("/admin/reports/users")
       ])
       
-      console.log("Fetched users:", usersData.data)
-      console.log("Fetched stats:", statsData.data)
-  
-      // Map API response to match the User interface
-      const mappedUsers = usersData.data.map((user: any) => ({
-        id: user.id,
-        name: `${capitalize(user.first_name)} ${capitalize(user.last_name)}`,
-        email: user.email,
-        role: user.role,
-        isActive: true, // Assuming all users are active by default
-      }))
-  
-      setUsers(mappedUsers)
+      if (usersData.status === 200) {
+        setUsers(usersData.data)
       setUserStats(statsData.data)
+      } else {
+        throw new Error("Failed to fetch users")
+      }
     } catch (err) {
       setError("Failed to fetch data. Please try again later.")
       toast.error("Failed to fetch data.")
@@ -73,15 +79,13 @@ export default function UsersListPage() {
 
   const filteredUsers = users.filter(
     (user) =>
-      user.name.toLowerCase().includes(filter.toLowerCase()) || user.email.toLowerCase().includes(filter.toLowerCase()),
+      `${user.first_name} ${user.last_name}`.toLowerCase().includes(filter.toLowerCase()) || 
+      user.email.toLowerCase().includes(filter.toLowerCase())
   )
 
-  const toggleUserStatus = (userId: number) => {
-    setIsLoading(true)
-    setTimeout(() => {
-      setUsers(users.map((user) => (user.id === userId ? { ...user, isActive: !user.isActive } : user)))
-      setIsLoading(false)
-    }, 1000)
+  const handleViewUser = (user: User) => {
+    setSelectedUser(user)
+    setIsViewModalOpen(true)
   }
 
   const handleEditUser = (userId: number) => {
@@ -94,9 +98,14 @@ export default function UsersListPage() {
     setSelectedUserId(null)
   }
 
+  const closeViewModal = () => {
+    setIsViewModalOpen(false)
+    setSelectedUser(null)
+  }
+
   const handleEditSuccess = () => {
     closeEditModal()
-    fetchUsers() // Refresh the users list
+    fetchUsers()
   }
 
   return (
@@ -146,20 +155,41 @@ export default function UsersListPage() {
                       <TableHead>Email</TableHead>
                       <TableHead>Role</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Created At</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredUsers.map((user) => (
-                      <TableRow key={user.id}>
-                        <TableCell>{user.name}</TableCell>
+                      <TableRow 
+                        key={user.id}
+                        className="cursor-pointer hover:bg-gray-50"
+                        onClick={() => handleViewUser(user)}
+                      >
+                        <TableCell>{`${capitalize(user.first_name)} ${capitalize(user.last_name)}`}</TableCell>
                         <TableCell>{user.email}</TableCell>
-                        <TableCell>{user.role}</TableCell>
+                        <TableCell>{user.role_details?.name || user.role}</TableCell>
                         <TableCell>
-                          <Switch checked={user.isActive} onCheckedChange={() => toggleUserStatus(user.id)} />
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              user.status === "active"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
+                            {user.status}
+                          </span>
                         </TableCell>
+                        <TableCell>{new Date(user.created_at).toLocaleString()}</TableCell>
                         <TableCell>
-                          <Button variant="outline" size="sm" onClick={() => handleEditUser(user.id)}>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleEditUser(user.id)
+                            }}
+                          >
                             Edit
                           </Button>
                         </TableCell>
@@ -178,6 +208,58 @@ export default function UsersListPage() {
         <Modal isOpen={isEditModalOpen} onClose={closeEditModal}>
           <EditUserPage userId={selectedUserId} onSuccess={handleEditSuccess} />
         </Modal>
+      )}
+
+      {/* View User Modal */}
+      {isViewModalOpen && selectedUser && (
+        <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>User Details</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Name</Label>
+                <div className="col-span-3">
+                  {`${capitalize(selectedUser.first_name)} ${capitalize(selectedUser.last_name)}`}
+                </div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Email</Label>
+                <div className="col-span-3">{selectedUser.email}</div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Role</Label>
+                <div className="col-span-3">{selectedUser.role_details?.name || selectedUser.role}</div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Status</Label>
+                <div className="col-span-3">
+                  <span
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      selectedUser.status === "active"
+                        ? "bg-green-100 text-green-800"
+                        : "bg-red-100 text-red-800"
+                    }`}
+                  >
+                    {selectedUser.status}
+                  </span>
+                </div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Created</Label>
+                <div className="col-span-3">{new Date(selectedUser.created_at).toLocaleString()}</div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Last Updated</Label>
+                <div className="col-span-3">{new Date(selectedUser.updated_at).toLocaleString()}</div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={closeViewModal}>Close</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </>
   )

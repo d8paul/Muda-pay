@@ -37,6 +37,7 @@ const menuItems = [
       { name: "Business List", path: "/admin/business/businesslist" },
       { name: "Add Business", path: "/admin/business/addbusiness" },
       { name: "Fee Products", path: "/admin/fees/products" }
+   
     ],
   },
   {
@@ -45,10 +46,26 @@ const menuItems = [
     submenu: [
       { name: "Users List", path: "/admin/users/list" },
       { name: "Add User", path: "/admin/users/add" },
+      { name: "Pending Users", path: "/admin/users/pending" },
     ],
   },
-  { name: "Roles", icon: UsersIcon, path: "/admin/roles" },
-  { name: "Rates", icon: CurrencyDollarIcon, path: "/admin/rates" },
+  {
+    name: "Roles",
+    icon: UsersIcon,
+    submenu: [
+      { name: "All Roles", path: "/admin/roles" },
+      { name: "Add Role", path: "/admin/roles/add" },
+      { name: "Pending Roles", path: "/admin/roles/pending" },
+    ],
+  },
+  {
+    name: "Rates",
+    icon: CurrencyDollarIcon,
+    submenu: [
+      { name: "Rates", path: "/admin/rates" },
+      { name: "Pending Rates", path: "/admin/rates/pending" },
+    ],
+  },
   {
     name: "Reports",
     icon: ChartBarIcon,

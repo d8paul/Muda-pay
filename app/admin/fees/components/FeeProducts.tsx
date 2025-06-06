@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { get } from "@/utils/api";
+import { get, put } from "@/utils/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -90,31 +90,19 @@ export default function FeeProducts() {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_PAYMENT_API}/admin/fees/products`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          product_id: editingProduct.product_id,
-          name: editingProduct.product_name,
-          description: editingProduct.product_code,
-        }),
+      await put(`/admin/fees/products/${editingProduct.product_id}`, {
+        status: editingProduct.status,
+        fee_type: editingProduct.fee_type,
+        fee_amount: editingProduct.fee_amount
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to update fee product');
-      }
-
-      const updatedProduct = await response.json();
-      setProducts((prev) =>
-        prev.map((p) =>
-          p.product_id === updatedProduct.product_id ? updatedProduct : p
-        )
-      );
-      toast.success("Fee product updated successfully");
+      // Close dialog and show notification first
       setIsDialogOpen(false);
       setEditingProduct(null);
+      toast.success("Fee product updated successfully");
+
+      // Fetch fresh data from the server
+      await loadProducts();
     } catch (error) {
       console.error("Error updating fee product:", error);
       toast.error("Failed to update fee product");
@@ -267,22 +255,48 @@ export default function FeeProducts() {
           {editingProduct && (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="text-sm font-medium">Name</label>
-                <Input
-                  value={editingProduct.product_name}
-                  onChange={(e) =>
-                    setEditingProduct({ ...editingProduct, product_name: e.target.value })
+                <label className="text-sm font-medium">Status</label>
+                <Select
+                  value={editingProduct.status}
+                  onValueChange={(value) =>
+                    setEditingProduct({ ...editingProduct, status: value })
                   }
-                />
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div>
-                <label className="text-sm font-medium">Code</label>
-                <Textarea
-                  value={editingProduct.product_code}
+                <label className="text-sm font-medium">Fee Type</label>
+                <Select
+                  value={editingProduct.fee_type}
+                  onValueChange={(value) =>
+                    setEditingProduct({ ...editingProduct, fee_type: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select fee type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="FLAT">Flat</SelectItem>
+                    <SelectItem value="PERCENTAGE">Percentage</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Fee Amount</label>
+                <Input
+                  type="number"
+                  value={editingProduct.fee_amount}
                   onChange={(e) =>
                     setEditingProduct({
                       ...editingProduct,
-                      product_code: e.target.value,
+                      fee_amount: parseFloat(e.target.value),
                     })
                   }
                 />
