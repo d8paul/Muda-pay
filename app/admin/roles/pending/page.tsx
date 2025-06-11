@@ -111,19 +111,24 @@ export default function PendingRoles() {
     try {
       setIsLoading(true)
       const response = await get("/admin/roles/pending")
-      if (response.status === 200) {
+      
+      if (response && response.data) {
         setPendingRoles(response.data)
+      } else if (response && Array.isArray(response)) {
+        setPendingRoles(response)
+      } else {
+        setPendingRoles([])
       }
     } catch (error) {
       console.error("Error fetching pending roles:", error)
       toast.error("Failed to fetch pending roles")
+      setPendingRoles([])
     } finally {
       setIsLoading(false)
     }
-  }, [])
-
+  }, []) // Remove hasPermission from dependencies
   useEffect(() => {
-    // Check if user has permission to view pending users
+    // Check if user has permission to view pending roles
     if (!hasPermission('roles.approve')) {
       router.push('/admin/dashboard')
       return
@@ -169,7 +174,7 @@ export default function PendingRoles() {
 
       const response = await put(`/admin/roles/${selectedRole.id}/add/reject`, payload)
 
-      if (response.status === 201) {
+      if (response.status === 200) {
         toast.success(response.message || "Role rejected successfully")
         fetchPendingRoles()
         setShowRejectDialog(false)
@@ -199,7 +204,7 @@ export default function PendingRoles() {
 
       const response = await put(`/admin/roles/${selectedRole.id}/add/${action}`, payload)
 
-      if (response.status === 201) {
+      if (response.status === 200) {
         toast.success(response.message || "Role added successfully")
         fetchPendingRoles()
       } else {
@@ -262,10 +267,6 @@ export default function PendingRoles() {
     ) : (
       <ChevronDown className="h-4 w-4 ml-1" />
     )
-  }
-
-  if (!hasPermission("roles.approve")) {
-    return null
   }
 
   return (

@@ -9,6 +9,13 @@ import { Switch } from "@/components/ui/switch"
 import toast from "react-hot-toast"
 import ProgressBar from "@/components/ProgressBar"
 import { get, put } from "@/utils/api"
+import { useTwoFactorAuth } from "@/hooks/useTwoFactorAuth"
+import TwoFactorAuthDialog from "@/components/TwoFactorAuthDialog"
+
+interface Role {
+  id: string
+  name: string
+}
 
 interface EditUserPageProps {
   userId: number
@@ -17,6 +24,7 @@ interface EditUserPageProps {
 
 export default function EditUserPage({ userId, onSuccess }: EditUserPageProps) {
   const [isLoading, setIsLoading] = useState(false)
+  const [roles, setRoles] = useState<Role[]>([])
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -26,13 +34,34 @@ export default function EditUserPage({ userId, onSuccess }: EditUserPageProps) {
     reset_password: false
   })
 
+  // Initialize 2FA hook
+  const { 
+    show2FAModal, 
+    setShow2FAModal, 
+    isLoading: is2FALoading, 
+    requireTwoFactorAuth, 
+    handle2FASubmit 
+  } = useTwoFactorAuth({
+    onSuccess: () => {
+      toast.success("User updated successfully")
+      onSuccess?.()
+    },
+    onError: (error) => {
+      toast.error("Failed to update user. Please try again.")
+    }
+  })
+
   useEffect(() => {
-    const fetchUserData = async () => {
+    const fetchData = async () => {
       setIsLoading(true)
       try {
-        const response = await get(`/admin/users/${userId}`)
-        const userData = response.data
+        // Fetch both user data and roles
+        const [userResponse, rolesResponse] = await Promise.all([
+          get(`/admin/users/${userId}`),
+          get("/admin/roles")
+        ])
         
+        const userData = userResponse.data
         setFormData({
           firstName: userData.first_name || "",
           lastName: userData.last_name || "",
@@ -41,6 +70,14 @@ export default function EditUserPage({ userId, onSuccess }: EditUserPageProps) {
           status: userData.status || "active",
           reset_password: false
         })
+
+        // Set roles from API response
+        if (rolesResponse && Array.isArray(rolesResponse.data)) {
+          setRoles(rolesResponse.data)
+        } else {
+          setRoles([])
+          toast.error("Failed to fetch roles")
+        }
       } catch (error) {
         toast.error("Failed to fetch user data")
       } finally {
@@ -48,7 +85,7 @@ export default function EditUserPage({ userId, onSuccess }: EditUserPageProps) {
       }
     }
 
-    fetchUserData()
+    fetchData()
   }, [userId])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -83,23 +120,31 @@ export default function EditUserPage({ userId, onSuccess }: EditUserPageProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    // Prepare the payload for the API
+    const payload = {
+      first_name: formData.firstName,
+      last_name: formData.lastName,
+      user_role: formData.user_role,
+      status: formData.status,
+      reset_password: formData.reset_password
+    }
+
+    // Use 2FA flow for user update
+    await requireTwoFactorAuth(payload, performUserUpdate)
+  }
+
+  // Function that performs the actual user update (called after 2FA verification)
+  const performUserUpdate = async (data: any, token?: string) => {
     setIsLoading(true)
     try {
+      // Include 2FA token in payload if provided
+      const payload = token ? { ...data, token } : data
+      
       // API call to edit user
-      await put(`/admin/users/${userId}`, {
-        first_name: formData.firstName,
-        last_name: formData.lastName,
-        email: formData.email,
-        user_role: formData.user_role,
-        status: formData.status,
-        reset_password: formData.reset_password
-      })
-
-      toast.success("User updated successfully")
-      // Call the onSuccess callback if provided
-      onSuccess?.()
+      await put(`/admin/users/${userId}`, payload)
     } catch (error) {
-      toast.error("Failed to update user. Please try again.")
+      console.error("Failed to update user:", error)
+      throw error // Important to throw the error so the hook can handle it
     } finally {
       setIsLoading(false)
     }
@@ -157,10 +202,11 @@ export default function EditUserPage({ userId, onSuccess }: EditUserPageProps) {
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="approver">Approver</SelectItem>
-                  <SelectItem value="verifier">Verifier</SelectItem>
-                  <SelectItem value="user">User</SelectItem>
+                  {roles.map((role) => (
+                    <SelectItem key={role.id} value={role.id}>
+                      {role.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -185,13 +231,21 @@ export default function EditUserPage({ userId, onSuccess }: EditUserPageProps) {
               <Label htmlFor="reset_password">Reset Password</Label>
             </div>
             <div>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? "Updating User..." : "Update User"}
+              <Button type="submit" disabled={isLoading || is2FALoading}>
+                {isLoading || is2FALoading ? "Updating User..." : "Update User"}
               </Button>
             </div>
           </form>
         </div>
       </div>
+
+      {/* 2FA Dialog */}
+      <TwoFactorAuthDialog
+        open={show2FAModal}
+        onOpenChange={setShow2FAModal}
+        onSubmit={handle2FASubmit}
+        isLoading={is2FALoading}
+      />
     </>
   )
 }

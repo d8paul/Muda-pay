@@ -48,10 +48,22 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const fetchUserProfile = async () => {
     try {
       setLoading(true)
+      
+      // Check if token exists
+      const token = localStorage.getItem("token")
+      console.log("Token exists:", !!token)
+      console.log("Token value:", token ? `${token.substring(0, 20)}...` : "null")
+      
       const response = await get('/admin/users/profile')
       console.log("User profile response:", response)
-      if (response.status === 201) {
+      
+      // Check for both 200 and 201 status codes
+      if (response.status === 200 || response.status === 201) {
         setUser(response.data)
+        console.log("User set successfully:", response.data)
+      } else {
+        console.log("Unexpected status code:", response.status)
+        setUser(null)
       }
     } catch (error) {
       console.error('Error fetching user profile:', error)

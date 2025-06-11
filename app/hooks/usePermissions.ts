@@ -39,8 +39,8 @@ export const usePermissions = (requiredPermission?: string) => {
   const hasPermission = (permission: string): boolean => {
     if (!user) return false
     
-    // Admin role has all permissions
-    if (user.role === 'admin') return true
+    // Admin role or null role has all permissions
+    if (user.role === 'admin' || user.role === null) return true
 
     // Check if the permission exists in the user's access rights
     return user.role_details?.access_rights?.includes(permission) ?? false

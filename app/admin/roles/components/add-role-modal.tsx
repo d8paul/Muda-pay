@@ -142,11 +142,11 @@ export default function AddRoleModal({ open, onClose, onSuccess }: AddRoleModalP
         access_right: selectedRights,
       })
 
-      if (response.status === 201) {
-        toast.success("Role created successfully")
+      if (response.status === 200) {
+        toast.success(response?.message || "Role created successfully")
         onSuccess()
       } else {
-        throw new Error(response.message || "Failed to create role")
+        throw new Error(response?.message || "Failed to create role")
       }
     } catch (error: any) {
       console.error("Error creating role:", error)

@@ -53,7 +53,7 @@ export default function PendingFeesTab({ businessId, products }: PendingFeesTabP
   const fetchPendingFees = async () => {
     try {
       setLoadingPendingFees(true)
-      const response = await get(`/admin/business/${businessId}/fees/pending`)
+      const response = await get(`/admin/business/fees/pending`)
       
       if (response && response.success && response.data) {
         setPendingFees(response.data)
