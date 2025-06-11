@@ -95,13 +95,19 @@ export default function AddUserPage() {
         setTotalItems(response.total || response.data.length)
       } else {
         console.error("Invalid response format:", response)
-        toast.error("Invalid response format from server")
+        toast.error(response.message || "Invalid response format from server")
         setRoles([])
         setFilteredRoles([])
       }
     } catch (error) {
       console.error("Error fetching roles:", error)
-      toast.error("Failed to fetch roles")
+      toast.error(
+        typeof error === "string"
+          ? error
+          : error instanceof Error && error.message
+          ? error.message
+          : "Failed to fetch roles"
+      )
       setRoles([])
       setFilteredRoles([])
     } finally {
