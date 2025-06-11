@@ -99,7 +99,7 @@ export default function BusinessListPage() {
   const handleSubmit = async () => {
     try {
       const response = await post("/admin/create-dashboard-login", formData)
-      if (response.status === 201) {
+      if (response.status === 201 || response.status === 200) {
         fetchBusinesses()
         toast.success("Login created successfully")
         setIsModalOpen(false)

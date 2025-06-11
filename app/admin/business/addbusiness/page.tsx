@@ -75,7 +75,7 @@ export default function AddBusinessPage() {
     try {
       const payload = token ? { ...data, token } : data
       const response = await post("/admin/create-business", payload)
-      if (response.status === 201) {
+      if (response.status === 201 || response.status === 200) {
         toast.success("Business added successfully")
         setFormData({
           business_name: "",
