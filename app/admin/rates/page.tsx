@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { get } from "@/utils/api"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -20,12 +21,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Plus, Pencil, Trash2, Search, X } from "lucide-react"
 import toast from "react-hot-toast"
 import ProgressBar from "@/components/ProgressBar"
 import AddRateModal from "./components/add-rate-modal"
 import EditRateModal from "./components/edit-rate-modal"
 import DeleteRateModal from "./components/delete-rate-modal"
+import PendingRates from "./PendingRates"
 
 interface Rate {
   id: string
@@ -58,6 +61,12 @@ export default function RatesPage() {
   const [nameFilter, setNameFilter] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [currencyFilter, setCurrencyFilter] = useState<string>("all")
+
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  
+  // Get the tab parameter from URL, default to "all"
+  const defaultTab = searchParams.get("tab") || "all"
 
   const fetchRates = async () => {
     try {
@@ -168,104 +177,115 @@ export default function RatesPage() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
           <div className="py-4">
-            <Card className="p-4 mb-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Search by base currency or quote currency..."
-                    value={nameFilter}
-                    onChange={(e) => setNameFilter(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <Select value={currencyFilter} onValueChange={setCurrencyFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filter by base currency" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Default Pairs</SelectItem>
-                    {currencyOptions.map(opt => (
-                      <SelectItem key={opt.asset_code} value={opt.asset_code}>
-                        {opt.asset_code} ({opt.currency})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {(nameFilter || statusFilter !== "all") && (
-                <div className="mt-4 flex justify-end">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={clearFilters}
-                    className="text-gray-500 hover:text-gray-700"
-                  >
-                    <X className="h-4 w-4 mr-2" />
-                    Clear Filters
-                  </Button>
-                </div>
-              )}
-            </Card>
-
-            <Card>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Pairs</TableHead>
-                        <TableHead>Markup (%)</TableHead>
-                        <TableHead>Markdown (%)</TableHead>
-                        <TableHead>Buy Price</TableHead>
-                        <TableHead>Sell Price</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {!isLoading && filteredRates.map((rate) => (
-                    <TableRow key={rate.id}>
-                      <TableCell>
-                       {rate.base_currency}/{rate.quote_currency}
-                      </TableCell>
-                      <TableCell>{rate.markup}%</TableCell>
-                      <TableCell>{rate.markdown}%</TableCell>
-                      <TableCell>
-                        {(Number(rate.current_exchange_rate) + (Number(rate.current_exchange_rate) * Number(rate.markup) / 100)).toFixed(2)} {rate.quote_currency}
-                      </TableCell>
-                      <TableCell>
-                        {(Number(rate.current_exchange_rate) - (Number(rate.current_exchange_rate) * Number(rate.markdown) / 100)).toFixed(2)} {rate.quote_currency}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end space-x-2">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handleEdit(rate)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-
-                  {!isLoading && filteredRates.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-4">
-                        No rates found
-                      </TableCell>
-                    </TableRow>
+            <Tabs defaultValue={defaultTab} className="w-full">
+              <TabsList>
+                <TabsTrigger value="all">All Rates</TabsTrigger>
+                <TabsTrigger value="pending">Pending Rates</TabsTrigger>
+              </TabsList>
+              <TabsContent value="all">
+                <Card className="p-4 mb-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="Search by base currency or quote currency..."
+                        value={nameFilter}
+                        onChange={(e) => setNameFilter(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                    <Select value={currencyFilter} onValueChange={setCurrencyFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Filter by base currency" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Default Pairs</SelectItem>
+                        {currencyOptions.map(opt => (
+                          <SelectItem key={opt.asset_code} value={opt.asset_code}>
+                            {opt.asset_code} ({opt.currency})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {(nameFilter || statusFilter !== "all") && (
+                    <div className="mt-4 flex justify-end">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={clearFilters}
+                        className="text-gray-500 hover:text-gray-700"
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Clear Filters
+                      </Button>
+                    </div>
                   )}
-                  
-                  {isLoading && (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-4">
-                        Loading Pair Prices
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </Card>
+                </Card>
+
+                <Card>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Pairs</TableHead>
+                            <TableHead>Markup (%)</TableHead>
+                            <TableHead>Markdown (%)</TableHead>
+                            <TableHead>Buy Price</TableHead>
+                            <TableHead>Sell Price</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {!isLoading && filteredRates.map((rate) => (
+                        <TableRow key={rate.id}>
+                          <TableCell>
+                           {rate.base_currency}/{rate.quote_currency}
+                          </TableCell>
+                          <TableCell>{rate.markup}%</TableCell>
+                          <TableCell>{rate.markdown}%</TableCell>
+                          <TableCell>
+                            {(Number(rate.current_exchange_rate) + (Number(rate.current_exchange_rate) * Number(rate.markup) / 100)).toFixed(2)} {rate.quote_currency}
+                          </TableCell>
+                          <TableCell>
+                            {(Number(rate.current_exchange_rate) - (Number(rate.current_exchange_rate) * Number(rate.markdown) / 100)).toFixed(2)} {rate.quote_currency}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end space-x-2">
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => handleEdit(rate)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+
+                      {!isLoading && filteredRates.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-4">
+                            No rates found
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      
+                      {isLoading && (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-4">
+                            Loading Pair Prices
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </Card>
+              </TabsContent>
+              <TabsContent value="pending">
+                <PendingRates />
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>
@@ -276,6 +296,8 @@ export default function RatesPage() {
         onSuccess={() => {
           setShowAddModal(false)
           fetchRates()
+          // Redirect to pending tab after successful rate creation
+          router.push('/admin/rates?tab=pending')
         }}
       />
 

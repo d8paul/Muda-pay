@@ -1,3 +1,5 @@
+"use client"
+
 import { useUser } from '@/contexts/UserContext'
 import { get } from '@/utils/api'
 
@@ -62,4 +64,4 @@ export const usePermissions = (requiredPermission?: string) => {
     hasRequiredPermission,
     availablePermissions: permissionNames
   }
-} 
+}
