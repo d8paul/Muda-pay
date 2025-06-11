@@ -11,18 +11,27 @@ import toast from "react-hot-toast"
 import { del, get, put, post } from "@/utils/api"
 
 export interface PendingFee {
-  id: number
-  fee_name: string
-  product_id: string
-  fee_type: "percentage" | "flat"
-  percentage_value: number
-  minimum_amount: string
-  maximum_amount: string
-  active_status: boolean
+  id: string
+  maker_id: string
+  checker_id: string | null
+  entry_type: string
   status: "pending" | "approved" | "rejected"
-  reason?: string
+  reason: string | null
+  data_content: {
+    id: string
+    client_id: string
+    fee_name: string
+    product_id: string
+    fee_type: "percentage" | "flat"
+    percentage_value: number
+    minimum_amount: string
+    maximum_amount: string
+    active_status: boolean
+  }
+  approved_at: string | null
   created_at: string
   updated_at: string
+  deleted_at: string | null
 }
 
 export interface Product {
@@ -55,7 +64,7 @@ export default function PendingFeesTab({ businessId, products }: PendingFeesTabP
       setLoadingPendingFees(true)
       const response = await get(`/admin/business/fees/pending`)
       
-      if (response && response.success && response.data) {
+      if (response && response.status === 200 && response.data) {
         setPendingFees(response.data)
       } else {
         setPendingFees([])
@@ -69,7 +78,7 @@ export default function PendingFeesTab({ businessId, products }: PendingFeesTabP
   }
 
   // Handle approval/rejection of pending fees
-  const handleApprovalAction = async (feeId: number, status: "approved" | "rejected", reason?: string) => {
+  const handleApprovalAction = async (feeId: string, status: "approved" | "rejected", reason?: string) => {
     try {
       setProcessingApproval(true)
       
@@ -159,31 +168,31 @@ export default function PendingFeesTab({ businessId, products }: PendingFeesTabP
             ) : (
               pendingFees.map((fee) => {
                 // Find the product details for this fee
-                const product = products.find(p => p.product_id.toString() === fee.product_id)
+                const product = products.find(p => p.product_id.toString() === fee.data_content.product_id)
                 
                 return (
                   <TableRow key={fee.id}>
-                    <TableCell className="font-medium">{fee.fee_name}</TableCell>
+                    <TableCell className="font-medium">{fee.data_content.fee_name}</TableCell>
                     <TableCell>
                       {product ? (
                         <div className="flex flex-col">
                           <span className="font-medium">{product.product_name}</span>
                           <span className="text-xs text-gray-500">
-                            ID: {fee.product_id} | Code: {product.product_code}
+                            ID: {fee.data_content.product_id} | Code: {product.product_code}
                           </span>
                         </div>
                       ) : (
-                        <span className="text-gray-500">ID: {fee.product_id}</span>
+                        <span className="text-gray-500">ID: {fee.data_content.product_id}</span>
                       )}
                     </TableCell>
-                    <TableCell className="capitalize">{fee.fee_type}</TableCell>
+                    <TableCell className="capitalize">{fee.data_content.fee_type}</TableCell>
                     <TableCell>
-                      {fee.fee_type === "percentage" 
-                        ? `${fee.percentage_value}%` 
-                        : `${fee.percentage_value}`}
+                      {fee.data_content.fee_type === "percentage" 
+                        ? `${fee.data_content.percentage_value}%` 
+                        : `${fee.data_content.percentage_value}`}
                     </TableCell>
-                    <TableCell>{fee.minimum_amount}</TableCell>
-                    <TableCell>{fee.maximum_amount}</TableCell>
+                    <TableCell>{fee.data_content.minimum_amount}</TableCell>
+                    <TableCell>{fee.data_content.maximum_amount}</TableCell>
                     <TableCell>
                       <Badge
                         variant={fee.status === "pending" ? "secondary" : fee.status === "approved" ? "default" : "destructive"}
@@ -254,31 +263,31 @@ export default function PendingFeesTab({ businessId, products }: PendingFeesTabP
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Fee Name</Label>
-                  <p className="text-sm font-medium">{selectedPendingFee.fee_name}</p>
+                  <p className="text-sm font-medium">{selectedPendingFee.data_content.fee_name}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Product ID</Label>
-                  <p className="text-sm">{selectedPendingFee.product_id}</p>
+                  <p className="text-sm">{selectedPendingFee.data_content.product_id}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Fee Type</Label>
-                  <p className="text-sm capitalize">{selectedPendingFee.fee_type}</p>
+                  <p className="text-sm capitalize">{selectedPendingFee.data_content.fee_type}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Value</Label>
                   <p className="text-sm">
-                    {selectedPendingFee.fee_type === "percentage" 
-                      ? `${selectedPendingFee.percentage_value}%` 
-                      : selectedPendingFee.percentage_value}
+                    {selectedPendingFee.data_content.fee_type === "percentage" 
+                      ? `${selectedPendingFee.data_content.percentage_value}%` 
+                      : selectedPendingFee.data_content.percentage_value}
                   </p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Minimum Amount</Label>
-                  <p className="text-sm">{selectedPendingFee.minimum_amount}</p>
+                  <p className="text-sm">{selectedPendingFee.data_content.minimum_amount}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Maximum Amount</Label>
-                  <p className="text-sm">{selectedPendingFee.maximum_amount}</p>
+                  <p className="text-sm">{selectedPendingFee.data_content.maximum_amount}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Status</Label>
