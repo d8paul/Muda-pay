@@ -62,23 +62,39 @@ export default function EditUserPage({ userId, onSuccess }: EditUserPageProps) {
         ])
         
         const userData = userResponse.data
-        setFormData({
-          firstName: userData.first_name || "",
-          lastName: userData.last_name || "",
-          email: userData.email || "",
-          user_role: userData.user_role || "",
-          status: userData.status || "active",
-          reset_password: false
-        })
-
-        // Set roles from API response
+        console.log("User data received:", userData) // Debug log to see the structure
+        
+        // Set roles first
         if (rolesResponse && Array.isArray(rolesResponse.data)) {
           setRoles(rolesResponse.data)
         } else {
           setRoles([])
           toast.error("Failed to fetch roles")
         }
+        
+        // Extract the current role - check multiple possible fields
+        let currentRole = ""
+        if (userData.user_role) {
+          currentRole = userData.user_role
+        } else if (userData.role_details?.id) {
+          currentRole = userData.role_details.id
+        } else if (userData.role) {
+          currentRole = userData.role
+        }
+        
+        console.log("Setting current role to:", currentRole) // Debug log
+        
+        setFormData({
+          firstName: userData.first_name || "",
+          lastName: userData.last_name || "",
+          email: userData.email || "",
+          user_role: currentRole,
+          status: userData.status || "active",
+          reset_password: false
+        })
+
       } catch (error) {
+        console.error("Error fetching data:", error)
         toast.error("Failed to fetch user data")
       } finally {
         setIsLoading(false)
