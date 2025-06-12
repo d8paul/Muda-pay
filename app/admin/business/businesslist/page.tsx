@@ -9,7 +9,7 @@ import ProgressBar from "@/components/ProgressBar"
 import toast from "react-hot-toast"
 import { get, post } from "@/utils/api"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { UserPlusIcon, UsersIcon, CurrencyDollarIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline"
+import { UserPlusIcon, UsersIcon, CurrencyDollarIcon, MagnifyingGlassIcon, CheckCircleIcon, ClockIcon, XCircleIcon, BuildingOfficeIcon } from "@heroicons/react/24/outline"
 import { X } from "lucide-react"
 import PendingCompanies from "./PendingCompanies"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
@@ -33,8 +33,21 @@ interface Business {
   environment: string
 }
 
+interface BusinessStats {
+  collections: number
+  payouts: number
+  revenue: number
+  transactions: number
+  businesses: number
+  businessInactiveCount: number
+  businessApprovedCount: number
+  businessRejectedCount: number
+  businessPendingCount: number
+}
+
 export default function BusinessListPage() {
   const [businesses, setBusinesses] = useState<Business[]>([])
+  const [businessStats, setBusinessStats] = useState<BusinessStats | null>(null)
   const [filter, setFilter] = useState("")
   const [phoneFilter, setPhoneFilter] = useState("")
   const [regFilter, setRegFilter] = useState("")
@@ -51,6 +64,7 @@ export default function BusinessListPage() {
 
   useEffect(() => {
     fetchBusinesses()
+    fetchBusinessStats()
   }, [])
 
   const fetchBusinesses = async () => {
@@ -68,6 +82,18 @@ export default function BusinessListPage() {
       setBusinesses([])
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const fetchBusinessStats = async () => {
+    try {
+      const response = await get("/admin/get-stats")
+      if (response.status === 200 && response.data) {
+        setBusinessStats(response.data)
+      }
+    } catch (error) {
+      console.error("Error fetching business stats:", error)
+      // Don't show error toast for stats as it's not critical
     }
   }
 
@@ -113,8 +139,9 @@ export default function BusinessListPage() {
   }
 
   const handleBusinessApproved = async () => {
-    // Refresh the businesses list
+    // Refresh the businesses list and stats
     await fetchBusinesses()
+    await fetchBusinessStats()
     // Switch to the "All Companies" tab to show the updated list
     setCurrentTab("all")
     router.push("/admin/business/businesslist?tab=all")
@@ -135,6 +162,53 @@ export default function BusinessListPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
           <h1 className="text-2xl font-semibold text-gray-900">Business List</h1>
         </div>
+        
+        {/* Summary Cards */}
+        {businessStats && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 mt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+              {/* Total Businesses */}
+              <Card className="p-6">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <BuildingOfficeIcon className="h-8 w-8 text-blue-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-500">Total Businesses</p>
+                    <p className="text-2xl font-bold text-gray-900">{businessStats.businesses}</p>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Pending Businesses */}
+              <Card className="p-6">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <ClockIcon className="h-8 w-8 text-yellow-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-500">Pending</p>
+                    <p className="text-2xl font-bold text-yellow-600">{businessStats.businessPendingCount}</p>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Rejected Businesses */}
+              <Card className="p-6">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <XCircleIcon className="h-8 w-8 text-red-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-500">Rejected</p>
+                    <p className="text-2xl font-bold text-red-600">{businessStats.businessRejectedCount}</p>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          </div>
+        )}
+
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
           <div className="py-4">
             <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full">

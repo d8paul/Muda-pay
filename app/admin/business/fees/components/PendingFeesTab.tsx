@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import toast from "react-hot-toast"
 import { del, get, put, post } from "@/utils/api"
+import { useTwoFactorAuth } from "@/hooks/useTwoFactorAuth"
+import TwoFactorAuthDialog from "@/components/TwoFactorAuthDialog"
 
 export interface PendingFee {
   id: string
@@ -58,6 +60,22 @@ export default function PendingFeesTab({ businessId, products }: PendingFeesTabP
   const [approvalReason, setApprovalReason] = useState("")
   const [processingApproval, setProcessingApproval] = useState(false)
 
+  // Initialize 2FA hook
+  const { 
+    show2FAModal, 
+    setShow2FAModal, 
+    isLoading: is2FALoading, 
+    requireTwoFactorAuth, 
+    handle2FASubmit 
+  } = useTwoFactorAuth({
+    onSuccess: () => {
+      // Success is handled in performApprovalAction
+    },
+    onError: (error) => {
+      // Error is handled in performApprovalAction
+    }
+  })
+
   // Fetch pending fees for the selected business
   const fetchPendingFees = async () => {
     try {
@@ -79,12 +97,30 @@ export default function PendingFeesTab({ businessId, products }: PendingFeesTabP
 
   // Handle approval/rejection of pending fees
   const handleApprovalAction = async (feeId: string, status: "approved" | "rejected", reason?: string) => {
+    // Prepare the payload for the API
+    const payload: any = { 
+      feeId,
+      status,
+      reason: reason || undefined
+    }
+
+    // Use 2FA flow for fee approval/rejection
+    await requireTwoFactorAuth(payload, performApprovalAction)
+  }
+
+  // Function that performs the actual approval action (called after 2FA verification)
+  const performApprovalAction = async (data: any, token?: string) => {
+    const { feeId, status, reason } = data
+    
+    setProcessingApproval(true)
     try {
-      setProcessingApproval(true)
-      
       const payload: any = { status }
       if (reason) {
         payload.reason = reason
+      }
+      // Include 2FA token in payload if provided
+      if (token) {
+        payload.token = token
       }
 
       await put(`/admin/business/fees/${feeId}/add/approve`, payload)
@@ -100,6 +136,7 @@ export default function PendingFeesTab({ businessId, products }: PendingFeesTabP
     } catch (error) {
       console.error(`Error ${status === 'approved' ? 'approving' : 'rejecting'} fee:`, error)
       toast.error(`Failed to ${status === 'approved' ? 'approve' : 'reject'} fee`)
+      throw error // Important to throw the error so the hook can handle it
     } finally {
       setProcessingApproval(false)
     }
@@ -217,7 +254,7 @@ export default function PendingFeesTab({ businessId, products }: PendingFeesTabP
                             setSelectedPendingFee(fee)
                             setApprovalReason("")
                           }}
-                          disabled={processingApproval}
+                          disabled={processingApproval || is2FALoading}
                         >
                           Preview
                         </Button>
@@ -228,18 +265,18 @@ export default function PendingFeesTab({ businessId, products }: PendingFeesTabP
                               variant="outline"
                               className="text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
                               onClick={() => handleApprovalAction(fee.id, "approved")}
-                              disabled={processingApproval}
+                              disabled={processingApproval || is2FALoading}
                             >
-                              Approve
+                              {(processingApproval || is2FALoading) ? "Processing..." : "Approve"}
                             </Button>
                             <Button
                               size="sm"
                               variant="outline" 
                               className="text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600"
                               onClick={() => handleApprovalAction(fee.id, "rejected")}
-                              disabled={processingApproval}
+                              disabled={processingApproval || is2FALoading}
                             >
-                              Reject
+                              {(processingApproval || is2FALoading) ? "Processing..." : "Reject"}
                             </Button>
                           </>
                         )}
@@ -334,17 +371,17 @@ export default function PendingFeesTab({ businessId, products }: PendingFeesTabP
                     </Button>
                     <Button
                       onClick={() => handleApprovalAction(selectedPendingFee.id, "approved", approvalReason || undefined)}
-                      disabled={processingApproval}
+                      disabled={processingApproval || is2FALoading}
                       className="bg-green-600 hover:bg-green-700 text-white"
                     >
-                      {processingApproval ? "Processing..." : "Approve Fee"}
+                      {(processingApproval || is2FALoading) ? "Processing..." : "Approve Fee"}
                     </Button>
                     <Button
                       onClick={() => handleApprovalAction(selectedPendingFee.id, "rejected", approvalReason || undefined)}
                       variant="destructive"
-                      disabled={processingApproval}
+                      disabled={processingApproval || is2FALoading}
                     >
-                      {processingApproval ? "Processing..." : "Reject Fee"}
+                      {(processingApproval || is2FALoading) ? "Processing..." : "Reject Fee"}
                     </Button>
                   </div>
                 </div>
@@ -367,6 +404,14 @@ export default function PendingFeesTab({ businessId, products }: PendingFeesTabP
           </Card>
         </div>
       )}
+
+      {/* 2FA Dialog */}
+      <TwoFactorAuthDialog
+        open={show2FAModal}
+        onOpenChange={setShow2FAModal}
+        onSubmit={handle2FASubmit}
+        isLoading={is2FALoading}
+      />
     </div>
   )
 }
