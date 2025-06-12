@@ -3,21 +3,26 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react'
 import { get } from '@/utils/api'
 
-export type Permission = 
-  | 'Create New account'
-  | 'Add Float'
-  | 'Maker'
-  | 'Checker'
-  | 'Changing rates'
-  | 'Add Business Account'
-  | 'Add Admin Account'
+export type AccessRight = {
+  id: string
+  name: string
+  description: string
+  module: string
+  status: string
+  created_at: string
+  updated_at: string | null
+  deleted_at: string | null
+}
 
 export type RoleDetails = {
-  id: number | null
-  name: string | null
-  details: string | null
-  status: string | null
-  access_rights: string[]
+  id: string
+  name: string
+  details: string
+  status: string
+  access_rights: AccessRight[]
+  created_at: string
+  updated_at: string | null
+  deleted_at: string | null
 }
 
 export type User = {
@@ -48,21 +53,26 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const fetchUserProfile = async () => {
     try {
       setLoading(true)
-      
-      // Check if token exists
-      const token = localStorage.getItem("token")
-      console.log("Token exists:", !!token)
-      console.log("Token value:", token ? `${token.substring(0, 20)}...` : "null")
-      
       const response = await get('/admin/users/profile')
       console.log("User profile response:", response)
       
-      // Check for both 200 and 201 status codes
-      if (response.status === 200 || response.status === 201) {
-        setUser(response.data)
-        console.log("User set successfully:", response.data)
+      // Handle different response formats from enhanced API utility
+      if (Array.isArray(response)) {
+        // Direct array response
+        setUser(response[0] || null)
+      } else if (response && typeof response === 'object') {
+        if (response.status === 200 || response.status === 201) {
+          // Wrapped response with status
+          setUser(response.data)
+        } else if (response.id) {
+          // Direct user object response
+          setUser(response)
+        } else {
+          console.log("Unexpected response format:", response)
+          setUser(null)
+        }
       } else {
-        console.log("Unexpected status code:", response.status)
+        console.log("Unexpected response type:", typeof response)
         setUser(null)
       }
     } catch (error) {

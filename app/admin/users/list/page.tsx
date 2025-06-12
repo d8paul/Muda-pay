@@ -10,12 +10,9 @@ import Modal from "@/components/ui/modal" // Assuming you have a modal component
 import EditUserPage from "./edit_user"
 import { get } from "@/utils/api"
 import toast from "react-hot-toast"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { X } from "lucide-react"
-import PendingUsers from "../pending/page"
 
 export default function UsersListPage() {
   interface User {
@@ -35,11 +32,15 @@ export default function UsersListPage() {
     updated_at: string
     created_at: string
   }
+
+  interface UserStats {
+    role: string
+    count: number
+  }
   
   const [users, setUsers] = useState<User[]>([])
+  const [userStats, setUserStats] = useState<UserStats[]>([])
   const [filter, setFilter] = useState("")
-  const [roleFilter, setRoleFilter] = useState("all")
-  const [currentTab, setCurrentTab] = useState("all")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
@@ -53,10 +54,14 @@ export default function UsersListPage() {
     setIsLoading(true)
     setError("")
     try {
-      const usersData = await get("/admin/users")
+      const [usersData, statsData] = await Promise.all([
+        get("/admin/users"),
+        get("/admin/reports/users")
+      ])
       
       if (usersData.status === 200) {
         setUsers(usersData.data)
+      setUserStats(statsData.data)
       } else {
         throw new Error("Failed to fetch users")
       }
@@ -72,21 +77,11 @@ export default function UsersListPage() {
     fetchUsers()
   }, [])
 
-  const filteredUsers = users.filter((user) => {
-    const matchesSearch = 
+  const filteredUsers = users.filter(
+    (user) =>
       `${user.first_name} ${user.last_name}`.toLowerCase().includes(filter.toLowerCase()) || 
       user.email.toLowerCase().includes(filter.toLowerCase())
-    
-    const matchesRole = roleFilter === "all" || 
-      (user.role_details?.name || user.role).toLowerCase() === roleFilter.toLowerCase()
-    
-    return matchesSearch && matchesRole
-  })
-
-  // Get unique roles for the filter dropdown
-  const uniqueRoles = Array.from(new Set(users.map(user => user.role_details?.name || user.role)))
-    .filter(Boolean)
-    .sort()
+  )
 
   const handleViewUser = (user: User) => {
     setSelectedUser(user)
@@ -120,122 +115,90 @@ export default function UsersListPage() {
       
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-          <h1 className="text-2xl font-semibold text-gray-900">Users Management</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">Users List</h1>
+          
+          {/* User Statistics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+            {userStats.map((stat) => (
+              <Card key={stat.role}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    {capitalize(stat.role)}s
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stat.count}</div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
 
           <div className="py-4">
-            <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full">
-              <TabsList>
-                <TabsTrigger value="all">All Users</TabsTrigger>
-                <TabsTrigger value="pending">Pending Users</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="all">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                  <div className="md:col-span-2">
-                    <Input
-                      type="text"
-                      placeholder="Filter users by name or email..."
-                      value={filter}
-                      onChange={(e) => setFilter(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Select value={roleFilter} onValueChange={setRoleFilter}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Filter by role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Roles</SelectItem>
-                        {uniqueRoles.map((role) => (
-                          <SelectItem key={role} value={role}>
-                            {capitalize(role)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                
-                {(filter || roleFilter !== "all") && (
-                  <div className="mb-4 flex justify-end">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setFilter("")
-                        setRoleFilter("all")
-                      }}
-                      className="text-gray-500 hover:text-gray-700"
-                    >
-                      <X className="h-4 w-4 mr-2" />
-                      Clear Filters
-                    </Button>
-                  </div>
-                )}
-
-                <div className="bg-white shadow sm:rounded-lg">
-                  {error ? (
-                    <div className="p-4 text-red-500">{error}</div>
-                  ) : filteredUsers.length === 0 && !isLoading ? (
-                    <div className="p-4 text-gray-500">No users found.</div>
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Email</TableHead>
-                          <TableHead>Role</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Created At</TableHead>
-                          <TableHead>Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredUsers.map((user) => (
-                          <TableRow 
-                            key={user.id}
-                            className="cursor-pointer hover:bg-gray-50"
-                            onClick={() => handleViewUser(user)}
+            <div className="mb-4">
+              <Input
+                type="text"
+                placeholder="Filter users..."
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+              />
+            </div>
+            <div className="bg-white shadow sm:rounded-lg">
+              {error ? (
+                <div className="p-4 text-red-500">{error}</div>
+              ) : filteredUsers.length === 0 && !isLoading ? (
+                <div className="p-4 text-gray-500">No users found.</div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Created At</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUsers.map((user) => (
+                      <TableRow 
+                        key={user.id}
+                        className="cursor-pointer hover:bg-gray-50"
+                        onClick={() => handleViewUser(user)}
+                      >
+                        <TableCell>{`${capitalize(user.first_name)} ${capitalize(user.last_name)}`}</TableCell>
+                        <TableCell>{user.email}</TableCell>
+                        <TableCell>{user.role_details?.name || user.role}</TableCell>
+                        <TableCell>
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              user.status === "active"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
                           >
-                            <TableCell>{`${capitalize(user.first_name)} ${capitalize(user.last_name)}`}</TableCell>
-                            <TableCell>{user.email}</TableCell>
-                            <TableCell>{user.role_details?.name || user.role}</TableCell>
-                            <TableCell>
-                              <span
-                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                  user.status === "active"
-                                    ? "bg-green-100 text-green-800"
-                                    : "bg-red-100 text-red-800"
-                                }`}
-                              >
-                                {user.status}
-                              </span>
-                            </TableCell>
-                            <TableCell>{new Date(user.created_at).toLocaleString()}</TableCell>
-                            <TableCell>
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleEditUser(user.id)
-                                }}
-                              >
-                                Edit
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="pending">
-                <PendingUsers />
-              </TabsContent>
-            </Tabs>
+                            {user.status}
+                          </span>
+                        </TableCell>
+                        <TableCell>{new Date(user.created_at).toLocaleString()}</TableCell>
+                        <TableCell>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleEditUser(user.id)
+                            }}
+                          >
+                            Edit
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
           </div>
         </div>
       </div>
