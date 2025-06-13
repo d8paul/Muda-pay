@@ -73,12 +73,28 @@ export default function PaymentMethodsPage() {
 
   const fetchPaymentMethods = async () => {
     try {
-      const response = await get("web/rail/accounts/getPaymentMethods");
-         setPaymentMethods(response);
+      console.log('Fetching payment methods...');
+      const response = await get("rail/accounts/getPaymentMethods");
+      console.log('Payment methods response:', response);
       
+      if (response.status === 200) {
+        if (Array.isArray(response.data)) {
+          console.log('Payment methods data:', response.data);
+          setPaymentMethods(response.data);
+        } else if (Array.isArray(response)) {
+          console.log('Payment methods data (direct):', response);
+          setPaymentMethods(response);
+        } else {
+          console.error('Invalid response format. Expected array:', response);
+          toast.error("Invalid response format from server");
+        }
+      } else {
+        console.error('Error response:', response);
+        toast.error(response.message || "Failed to fetch payment methods");
+      }
     } catch (error) {
       console.error("Error fetching payment methods:", error);
-      toast.error("Failed to fetch payment methods");
+      toast.error("Failed to fetch payment methods: " + (error instanceof Error ? error.message : "Unknown error"));
     } finally {
       setLoading(false);
     }
@@ -87,6 +103,8 @@ export default function PaymentMethodsPage() {
   const handleAddPaymentMethod = async () => {
     try {
       const response = await post("rail/accounts/addPaymentMethod", formData);
+      console.log('Add payment method response:', response);
+      
       if (response.status === 200) {
         toast.success("Payment method added successfully");
         setIsAddingMethod(false);
@@ -104,7 +122,7 @@ export default function PaymentMethodsPage() {
       }
     } catch (error) {
       console.error("Error adding payment method:", error);
-      toast.error("Failed to add payment method");
+      toast.error("Failed to add payment method: " + (error instanceof Error ? error.message : "Unknown error"));
     }
   };
 
