@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/dialog"
 import { DateRange } from "react-day-picker"
 import { DatePickerWithRange } from "@/components/ui/date-range-picker"
+import ExportButton from "@/components/ui/export-button"
+import { ExportField } from "@/utils/exportService"
 
 interface Transaction {
   created_on: string
@@ -165,10 +167,51 @@ const LiquidityRailTab = () => {
     return sum + profit
   }, 0)
 
+  // Export configuration
+  const exportFields: ExportField[] = [
+    { key: 'created_on', label: 'Date', type: 'date' },
+    { key: 'transId', label: 'Transaction ID', type: 'string' },
+    { key: 'amount', label: 'Amount', type: 'currency' },
+    { key: 'currency', label: 'Currency', type: 'string' },
+    { key: 'spread', label: 'Spread', type: 'currency' },
+    { key: 'fee', label: 'Profit', type: 'currency' },
+    { key: 'ex_rate', label: 'Exchange Rate', type: 'number' },
+  ]
+
+  const exportSummary = [
+    {
+      label: 'Total Transactions',
+      value: filteredTransactions.length.toString()
+    },
+    {
+      label: 'Total Profit',
+      value: totalProfit.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      })
+    }
+  ]
+
   return (
     <>
       <ProgressBar isLoading={isLoading} />
       <div className="space-y-4">
+        {/* Header with Title and Export Button */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Liquidity Rail Transactions</h3>
+            <p className="text-sm text-gray-600">Analyze liquidity rail transaction profits and fees</p>
+          </div>
+          <ExportButton
+            data={filteredTransactions}
+            fields={exportFields}
+            filename={`liquidity-rail-report-${new Date().toISOString().split('T')[0]}`}
+            title="Liquidity Rail Profit Report"
+            dateRange={filters.dateRange}
+            summary={exportSummary}
+          />
+        </div>
+
         {/* Date Range Display */}
         <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
           <h3 className="text-sm font-medium text-blue-900">Report Period</h3>

@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/dialog"
 import { DateRange } from "react-day-picker"
 import { DatePickerWithRange } from "@/components/ui/date-range-picker"
+import ExportButton from "@/components/ui/export-button"
+import { ExportField } from "@/utils/exportService"
 
 interface Transaction {
   trans_type: string
@@ -51,8 +53,7 @@ interface TransactionResponse {
 
 interface SearchFilters {
   searchTerm: string
-  trans_type: string
-  status: string
+  currency: string
   dateRange: DateRange | undefined
 }
 
@@ -64,8 +65,7 @@ const MudaPayTab = () => {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null)
   const [filters, setFilters] = useState<SearchFilters>({
     searchTerm: "",
-    trans_type: "all",
-    status: "all",
+    currency: "UGX",
     dateRange: {
       from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
       to: new Date(), // today
@@ -83,8 +83,8 @@ const MudaPayTab = () => {
       if (filters.dateRange?.to) {
         queryParams.append('end_date', filters.dateRange.to.toISOString().split('T')[0])
       }
-      if (filters.trans_type && filters.trans_type !== "all") {
-        queryParams.append('trans_type', filters.trans_type)
+      if (filters.currency && filters.currency !== "all") {
+        queryParams.append('currency', filters.currency)
       }
 
       const response = await get(`/admin/reports/profit/mudapay?${queryParams.toString()}`)
@@ -115,7 +115,7 @@ const MudaPayTab = () => {
 
   useEffect(() => {
     fetchTransactions()
-  }, [filters.trans_type, filters.dateRange])
+  }, [filters.currency, filters.dateRange])
 
   const handleFilterChange = (key: keyof SearchFilters, value: string | DateRange | undefined) => {
     setFilters((prev) => ({ ...prev, [key]: value }))
@@ -124,8 +124,7 @@ const MudaPayTab = () => {
   const handleResetFilters = () => {
     setFilters({
       searchTerm: "",
-      trans_type: "all",
-      status: "all",
+      currency: "UGX",
       dateRange: {
         from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
         to: new Date(),
@@ -153,8 +152,7 @@ const MudaPayTab = () => {
   // Filter transactions based on current filters
   const filteredTransactions = transactions.filter((transaction) => {
     return (
-      (filters.trans_type === "all" || transaction.trans_type === filters.trans_type) &&
-      (filters.status === "all" || transaction.status === filters.status) &&
+      (filters.currency === "all" || transaction.currency === filters.currency) &&
       (!filters.searchTerm ||
         transaction.trans_id.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
         transaction.amount.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
@@ -168,16 +166,57 @@ const MudaPayTab = () => {
     return sum + profit
   }, 0)
 
-  const uniqueValues = {
-    transTypes: Array.from(new Set(transactions.map(t => t.trans_type))),
-    assetCodes: Array.from(new Set(transactions.map(t => t.asset_code))),
-    currencies: Array.from(new Set(transactions.map(t => t.currency)))
-  }
+  // Get the selected currency for display
+  const selectedCurrency = filters.currency || 'UGX'
+
+  // Export configuration
+  const exportFields: ExportField[] = [
+    { key: 'created_at', label: 'Date', type: 'date' },
+    { key: 'trans_id', label: 'Transaction ID', type: 'string' },
+    { key: 'amount', label: 'Amount', type: 'currency' },
+    { key: 'asset_code', label: 'Asset Code', type: 'string' },
+    { key: 'currency', label: 'Currency', type: 'string' },
+    { key: 'status', label: 'Status', type: 'string' },
+    { key: 'provider_fees', label: 'Provider Fees', type: 'currency' },
+    { key: 'muda_fees', label: 'Muda Fees', type: 'currency' },
+    { key: 'profit', label: 'Profit', type: 'currency' },
+    { key: 'trans_type', label: 'Transaction Type', type: 'string' },
+  ]
+
+  const exportSummary = [
+    {
+      label: 'Total Transactions',
+      value: filteredTransactions.length.toString()
+    },
+    {
+      label: 'Total Profit',
+      value: `${selectedCurrency} ${totalProfit.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      })}`
+    }
+  ]
 
   return (
     <>
       <ProgressBar isLoading={isLoading} />
       <div className="space-y-4">
+        {/* Header with Title and Export Button */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">MudaPay Transactions</h3>
+            <p className="text-sm text-gray-600">Analyze MudaPay transaction profits and fees</p>
+          </div>
+          <ExportButton
+            data={filteredTransactions}
+            fields={exportFields}
+            filename={`mudapay-profit-report-${new Date().toISOString().split('T')[0]}`}
+            title="MudaPay Profit Report"
+            dateRange={filters.dateRange}
+            summary={exportSummary}
+          />
+        </div>
+
         {dateRange && (
           <div className="bg-blue-50 p-4 rounded-lg">
             <h3 className="text-sm font-medium text-blue-900">Report Period</h3>
@@ -203,7 +242,7 @@ const MudaPayTab = () => {
             </div>
             <div className="text-right">
               <p className="text-2xl font-bold text-blue-900">
-                {totalProfit.toLocaleString('en-US', { 
+                {selectedCurrency} {totalProfit.toLocaleString('en-US', { 
                   minimumFractionDigits: 2, 
                   maximumFractionDigits: 2 
                 })}
@@ -213,7 +252,7 @@ const MudaPayTab = () => {
           </div>
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           <div className="sm:col-span-2 xl:col-span-2">
             <Input
               type="text"
@@ -229,28 +268,12 @@ const MudaPayTab = () => {
             />
           </div>
           <div className="xl:col-span-1">
-            <Select value={filters.trans_type} onValueChange={(value) => handleFilterChange("trans_type", value)}>
+            <Select value={filters.currency} onValueChange={(value) => handleFilterChange("currency", value)}>
               <SelectTrigger>
-                <SelectValue placeholder="Transaction Type" />
+                <SelectValue placeholder="Currency" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                {uniqueValues.transTypes.map(type => (
-                  <SelectItem key={type} value={type}>{type}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="xl:col-span-1">
-            <Select value={filters.status} onValueChange={(value) => handleFilterChange("status", value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="SUCCESS">Success</SelectItem>
-                <SelectItem value="PENDING">Pending</SelectItem>
-                <SelectItem value="FAILED">Failed</SelectItem>
+                <SelectItem value="UGX">UGX</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -262,9 +285,8 @@ const MudaPayTab = () => {
               <TableHead>Date</TableHead>
               <TableHead>Transaction ID</TableHead>
               <TableHead>Amount</TableHead>
-              <TableHead>Asset Code</TableHead>
               <TableHead>Currency</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>Muda Fees</TableHead>
               <TableHead>Provider Fees</TableHead>
               <TableHead>Profit</TableHead>
             </TableRow>
@@ -272,7 +294,7 @@ const MudaPayTab = () => {
           <TableBody>
             {filteredTransactions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                   No transactions found
                 </TableCell>
               </TableRow>
@@ -288,18 +310,24 @@ const MudaPayTab = () => {
                   <TableCell>
                     {parseFloat(transaction.amount).toLocaleString()}
                   </TableCell>
-                  <TableCell>{transaction.asset_code}</TableCell>
                   <TableCell>{transaction.currency}</TableCell>
                   <TableCell>
-                    <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(transaction.status)}`}>
-                      {transaction.status}
-                    </span>
+                    {transaction.muda_fees ? parseFloat(transaction.muda_fees).toLocaleString('en-US', { 
+                      minimumFractionDigits: 2, 
+                      maximumFractionDigits: 2 
+                    }) : "0.00"}
                   </TableCell>
                   <TableCell>
-                    {transaction.provider_fees || "N/A"}
+                    {transaction.provider_fees ? parseFloat(transaction.provider_fees).toLocaleString('en-US', { 
+                      minimumFractionDigits: 2, 
+                      maximumFractionDigits: 2 
+                    }) : "0.00"}
                   </TableCell>
                   <TableCell>
-                    {transaction.profit || "N/A"}
+                    {transaction.profit ? parseFloat(transaction.profit).toLocaleString('en-US', { 
+                      minimumFractionDigits: 2, 
+                      maximumFractionDigits: 2 
+                    }) : "0.00"}
                   </TableCell>
                 </TableRow>
               ))
@@ -357,15 +385,33 @@ const MudaPayTab = () => {
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-500">Muda Fees</Label>
-                    <p className="mt-1">{selectedTransaction.muda_fees || "N/A"}</p>
+                    <p className="mt-1">
+                      {selectedTransaction.muda_fees ? 
+                        `${selectedTransaction.currency} ${parseFloat(selectedTransaction.muda_fees).toLocaleString('en-US', { 
+                          minimumFractionDigits: 2, 
+                          maximumFractionDigits: 2 
+                        })}` : "N/A"}
+                    </p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-500">Provider Fees</Label>
-                    <p className="mt-1">{selectedTransaction.provider_fees || "N/A"}</p>
+                    <p className="mt-1">
+                      {selectedTransaction.provider_fees ? 
+                        `${selectedTransaction.currency} ${parseFloat(selectedTransaction.provider_fees).toLocaleString('en-US', { 
+                          minimumFractionDigits: 2, 
+                          maximumFractionDigits: 2 
+                        })}` : "N/A"}
+                    </p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-500">Profit</Label>
-                    <p className="mt-1">{selectedTransaction.profit || "N/A"}</p>
+                    <p className="mt-1">
+                      {selectedTransaction.profit ? 
+                        `${selectedTransaction.currency} ${parseFloat(selectedTransaction.profit).toLocaleString('en-US', { 
+                          minimumFractionDigits: 2, 
+                          maximumFractionDigits: 2 
+                        })}` : "N/A"}
+                    </p>
                   </div>
                 </div>
               </div>
