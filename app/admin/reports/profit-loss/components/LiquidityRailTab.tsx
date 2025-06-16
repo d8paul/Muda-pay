@@ -20,13 +20,34 @@ import ExportButton from "@/components/ui/export-button"
 import { ExportField } from "@/utils/exportService"
 
 interface Transaction {
-  created_on: string
-  ex_rate: string
+  id: number
   transId: string
-  amount: string
-  currency: string
-  spread: string
+  provider_id: string
+  company_id: number
+  send_asset: string
+  send_amount: string
+  receive_currency: string
+  receive_amount: number
+  ex_rate: string
+  account_number: string
+  service_id: string
+  receiver_address: string
+  pay_in_status: string
+  status: string
+  sending_address: string
+  response_body: string | null
+  reason: string | null
+  created_on: string
+  bank_name: string
+  bank_code: string
+  provider_ref_id: string
+  provider_address: string
+  provider_memo: string
   fee: string
+  fee_currency: string | null
+  payment_method_id: string
+  narration: string | null
+  hash: string | null
 }
 
 interface DatePeriod {
@@ -133,7 +154,8 @@ const LiquidityRailTab = () => {
       let filtersData = null
       
       if (response.data) {
-        transactionsData = response.data.transactions || response.data || []
+        // Updated to use items array from the new API response structure
+        transactionsData = response.data.items || response.data.transactions || response.data || []
         dateRangeData = response.data.dateRange || null
         filtersData = response.data.filters || null
       }
@@ -198,12 +220,13 @@ const LiquidityRailTab = () => {
   }
 
   // Filter transactions based on current filters
-  const filteredTransactions = transactions.filter((transaction) => {
+  const filteredTransactions = (Array.isArray(transactions) ? transactions : []).filter((transaction) => {
     return (
       (!filters.searchTerm ||
         transaction.transId.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-        transaction.amount.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-        transaction.currency.toLowerCase().includes(filters.searchTerm.toLowerCase()))
+        transaction.send_amount.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+        transaction.receive_currency.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+        transaction.account_number.toLowerCase().includes(filters.searchTerm.toLowerCase()))
     )
   })
 
@@ -217,11 +240,18 @@ const LiquidityRailTab = () => {
   const exportFields: ExportField[] = [
     { key: 'created_on', label: 'Date', type: 'date' },
     { key: 'transId', label: 'Transaction ID', type: 'string' },
-    { key: 'amount', label: 'Amount', type: 'currency' },
-    { key: 'currency', label: 'Currency', type: 'string' },
-    { key: 'spread', label: 'Spread', type: 'currency' },
-    { key: 'fee', label: 'Profit', type: 'currency' },
+    { key: 'send_asset', label: 'Send Asset', type: 'string' },
+    { key: 'send_amount', label: 'Send Amount', type: 'currency' },
+    { key: 'receive_currency', label: 'Receive Currency', type: 'string' },
+    { key: 'receive_amount', label: 'Receive Amount', type: 'currency' },
     { key: 'ex_rate', label: 'Exchange Rate', type: 'number' },
+    { key: 'fee', label: 'Profit', type: 'currency' },
+    { key: 'status', label: 'Status', type: 'string' },
+    { key: 'pay_in_status', label: 'Pay-in Status', type: 'string' },
+    { key: 'account_number', label: 'Account Number', type: 'string' },
+    { key: 'service_id', label: 'Service ID', type: 'string' },
+    { key: 'provider_id', label: 'Provider ID', type: 'string' },
+    { key: 'company_id', label: 'Company ID', type: 'string' },
   ]
 
   const exportSummary = [
@@ -231,10 +261,10 @@ const LiquidityRailTab = () => {
     },
     {
       label: 'Total Profit',
-      value: totalProfit.toLocaleString('en-US', {
+      value: `UGX ${totalProfit.toLocaleString('en-US', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
-      })
+      })}`
     }
   ]
 
@@ -281,7 +311,7 @@ const LiquidityRailTab = () => {
             </div>
             <div className="text-right">
               <p className="text-2xl font-bold text-blue-900">
-                {totalProfit.toLocaleString('en-US', { 
+                UGX {totalProfit.toLocaleString('en-US', { 
                   minimumFractionDigits: 2, 
                   maximumFractionDigits: 2 
                 })}
@@ -327,7 +357,7 @@ const LiquidityRailTab = () => {
               <TableHead>Date</TableHead>
               <TableHead>Transaction ID</TableHead>
               <TableHead>Amount</TableHead>
-              <TableHead>Spread</TableHead>
+              <TableHead>Exchange Rate</TableHead>
               <TableHead>Profit</TableHead>
             </TableRow>
           </TableHeader>
@@ -348,13 +378,19 @@ const LiquidityRailTab = () => {
                   <TableCell>{formatDate(transaction.created_on)}</TableCell>
                   <TableCell className="font-mono text-sm">{transaction.transId || "N/A"}</TableCell>
                   <TableCell>
-                    {parseFloat(transaction.amount).toLocaleString()} {transaction.currency}
+                    {parseFloat(transaction.send_amount).toLocaleString()} {transaction.send_asset} → {transaction.receive_amount.toLocaleString()} {transaction.receive_currency}
                   </TableCell>
                   <TableCell>
-                    {transaction.spread || "N/A"}
+                    {parseFloat(transaction.ex_rate).toLocaleString('en-US', { 
+                      minimumFractionDigits: 2, 
+                      maximumFractionDigits: 4 
+                    })}
                   </TableCell>
                   <TableCell>
-                    {transaction.fee || "N/A"}
+                    UGX {parseFloat(transaction.fee).toLocaleString('en-US', { 
+                      minimumFractionDigits: 2, 
+                      maximumFractionDigits: 2 
+                    })}
                   </TableCell>
                 </TableRow>
               ))
@@ -379,28 +415,92 @@ const LiquidityRailTab = () => {
                     <p className="mt-1">{formatDate(selectedTransaction.created_on)}</p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Exchange Rate</Label>
-                    <p className="mt-1">{selectedTransaction.ex_rate || "N/A"}</p>
+                    <Label className="text-sm font-medium text-gray-500">Status</Label>
+                    <p className="mt-1">
+                      <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(selectedTransaction.status)}`}>
+                        {selectedTransaction.status}
+                      </span>
+                    </p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Currency</Label>
-                    <p className="mt-1">{selectedTransaction.currency}</p>
+                    <Label className="text-sm font-medium text-gray-500">Pay-in Status</Label>
+                    <p className="mt-1">
+                      <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(selectedTransaction.pay_in_status)}`}>
+                        {selectedTransaction.pay_in_status}
+                      </span>
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Send Asset</Label>
+                    <p className="mt-1">{selectedTransaction.send_asset}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Send Amount</Label>
+                    <p className="mt-1">
+                      {parseFloat(selectedTransaction.send_amount).toLocaleString()} {selectedTransaction.send_asset}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Receive Currency</Label>
+                    <p className="mt-1">{selectedTransaction.receive_currency}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Receive Amount</Label>
+                    <p className="mt-1">
+                      {selectedTransaction.receive_amount.toLocaleString()} {selectedTransaction.receive_currency}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Exchange Rate</Label>
+                    <p className="mt-1">{parseFloat(selectedTransaction.ex_rate).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Fee (Profit)</Label>
+                    <p className="mt-1">
+                      UGX {parseFloat(selectedTransaction.fee).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
                   </div>
                 </div>
                 <div className="space-y-4">
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Amount</Label>
-                    <p className="mt-1">
-                      {parseFloat(selectedTransaction.amount).toLocaleString()} {selectedTransaction.currency}
-                    </p>
+                    <Label className="text-sm font-medium text-gray-500">Account Number</Label>
+                    <p className="mt-1">{selectedTransaction.account_number}</p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Spread</Label>
-                    <p className="mt-1">{selectedTransaction.spread || "N/A"}</p>
+                    <Label className="text-sm font-medium text-gray-500">Service ID</Label>
+                    <p className="mt-1">{selectedTransaction.service_id}</p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Fee (Profit)</Label>
-                    <p className="mt-1">{selectedTransaction.fee || "N/A"}</p>
+                    <Label className="text-sm font-medium text-gray-500">Provider ID</Label>
+                    <p className="mt-1">{selectedTransaction.provider_id}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Company ID</Label>
+                    <p className="mt-1">{selectedTransaction.company_id}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Sending Address</Label>
+                    <p className="mt-1 font-mono text-xs break-all">{selectedTransaction.sending_address}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Receiver Address</Label>
+                    <p className="mt-1 font-mono text-xs break-all">{selectedTransaction.receiver_address}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Provider Memo</Label>
+                    <p className="mt-1">{selectedTransaction.provider_memo || "N/A"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Payment Method ID</Label>
+                    <p className="mt-1 font-mono text-xs">{selectedTransaction.payment_method_id}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Hash</Label>
+                    <p className="mt-1 font-mono text-xs break-all">{selectedTransaction.hash || "N/A"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Reason</Label>
+                    <p className="mt-1">{selectedTransaction.reason || "N/A"}</p>
                   </div>
                 </div>
               </div>
