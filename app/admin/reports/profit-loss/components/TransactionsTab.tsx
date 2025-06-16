@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -8,182 +8,129 @@ import { Label } from "@/components/ui/label"
 import { get } from "@/utils/api"
 import ProgressBar from "@/components/ProgressBar"
 import toast from "react-hot-toast"
-import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight } from "lucide-react"
-import { DateRange } from "react-day-picker"
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { DateRange } from "react-day-picker"
 import { DatePickerWithRange } from "@/components/ui/date-range-picker"
-import { addDays } from "date-fns"
 
 interface Transaction {
-  id: number
-  transId: string
-  company_id: string
-  send_asset: string
-  send_amount: string
-  receive_currency: string
-  receive_amount: number
-  ex_rate: string
-  receiver_address: string
-  pay_in_status: string
+  trans_type: string
+  trans_id: string
+  amount: string
+  asset_code: string
+  currency: string
   status: string
-  sending_address: string
-  response_body: string | null
-  reason: string | null
-  created_on: string
-  provider_ref_id: string
-  provider_address: string
-  provider_memo: string
-  fee: string
-  narration: string | null
-  hash: string | null
-  payment_mtd_id: number
-  auto_id: number
-  tradeMetrics?: {
-    spreadPercentage: number
-    profit: number
-  }
-  payment_method: {
-    id: string
-    kotani_customer_key: string
-    type: string
-    currency: string
-    phone_number: string
-    country_code: string
-    network: string
-    account_name: string
-    bank_name: string | null
-    bank_code: string | null
-    account_number: string | null
-    bank_address: string | null
-    bank_phone_number: string | null
-    bank_country: string | null
-    sort_code: string | null
-    swift_code: string | null
-    created_at: string
-    updated_at: string
-  }
-  service_provider: {
-    provider_service_id: number
-    service_id: number
-    provider_id: number
-    min_amount: number
-    max_amount: number
-    service: {
-      service_code: string
-      service_name: string
-      country: string
-      provider_type: string
-    }
-  }
+  created_at: string
+  muda_fees: string
+  provider_fees: string
+  profit: string
 }
 
-interface Pagination {
-  current_page: number
-  next_page: number | null
-  previous_page: number | null
-  total_pages: number
-  total_items: number
-  items_per_page: number
+interface DatePeriod {
+  start: string
+  end: string
+}
+
+interface Filters {
+  trans_type: string
 }
 
 interface TransactionResponse {
-  items: Transaction[]
-  pagination: Pagination
+  status: number
+  message: string
+  data: {
+    transactions: Transaction[]
+    dateRange: DatePeriod
+    filters: Filters
+  }
 }
 
 interface SearchFilters {
   searchTerm: string
+  trans_type: string
   status: string
-  payInStatus: string
-  sendAsset: string
-  receiveCurrency: string
-  provider: string
   dateRange: DateRange | undefined
 }
 
 const TransactionsTab = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [dateRange, setDateRange] = useState<DatePeriod | null>(null)
+  const [responseFilters, setResponseFilters] = useState<Filters | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null)
   const [filters, setFilters] = useState<SearchFilters>({
     searchTerm: "",
-    status: "SUCCESSFUL",
-    payInStatus: "",
-    sendAsset: "",
-    receiveCurrency: "",
-    provider: "all",
-    dateRange: undefined
-  })
-  const [pagination, setPagination] = useState<Pagination>({
-    current_page: 1,
-    next_page: null,
-    previous_page: null,
-    total_pages: 1,
-    total_items: 0,
-    items_per_page: 10
+    trans_type: "all",
+    status: "all",
+    dateRange: {
+      from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
+      to: new Date(), // today
+    }
   })
 
-  const fetchTransactions = async (page: number = 1) => {
+  const fetchTransactions = async () => {
     setIsLoading(true)
     try {
-      const queryParams = new URLSearchParams({
-        page: page.toString(),
-        limit: pagination.items_per_page.toString(),
-        ...(filters.status && filters.status !== "all" && { status: filters.status }),
-        ...(filters.payInStatus && filters.payInStatus !== "all" && { pay_in_status: filters.payInStatus }),
-        ...(filters.sendAsset && filters.sendAsset !== "all" && { send_asset: filters.sendAsset }),
-        ...(filters.receiveCurrency && filters.receiveCurrency !== "all" && { receive_currency: filters.receiveCurrency }),
-        ...(filters.provider !== "all" && { provider: filters.provider }),
-        ...(filters.searchTerm && { search: filters.searchTerm }),
-        ...(filters.dateRange && { start_date: filters.dateRange.from?.toISOString(), end_date: filters.dateRange.to?.toISOString() })
-      })
-
-      const response = await get(`/admin/reports/profit-on-trades?${queryParams.toString()}`)
-      console.log("Response: ", response.data)
-      const data = response.data as TransactionResponse
+      const queryParams = new URLSearchParams()
       
-      setTransactions(data.items)
-      setPagination(data.pagination)
+      if (filters.dateRange?.from) {
+        queryParams.append('start_date', filters.dateRange.from.toISOString().split('T')[0])
+      }
+      if (filters.dateRange?.to) {
+        queryParams.append('end_date', filters.dateRange.to.toISOString().split('T')[0])
+      }
+      if (filters.trans_type && filters.trans_type !== "all") {
+        queryParams.append('trans_type', filters.trans_type)
+      }
+
+      const response = await get(`/admin/reports/profit/mudapay?${queryParams.toString()}`)
+      console.log("Response: ", response)
+      
+      if (response.status !== 200) {
+        throw new Error(response.message || 'Failed to fetch profit reports')
+      }
+
+      // Check if response.data exists and has the expected structure
+      if (!response.data) {
+        throw new Error('No data received from server')
+      }
+
+      setTransactions(response.data.transactions || [])
+      setDateRange(response.data.dateRange || null)
+      setResponseFilters(response.data.filters || null)
     } catch (error) {
       console.error("Error fetching transactions:", error)
       toast.error("Failed to fetch transactions")
       setTransactions([])
+      setDateRange(null)
+      setResponseFilters(null)
     } finally {
       setIsLoading(false)
     }
   }
 
   useEffect(() => {
-    fetchTransactions(1)
-  }, [filters, pagination.items_per_page])
+    fetchTransactions()
+  }, [filters.trans_type, filters.dateRange])
 
-  const handleFilterChange = (key: keyof SearchFilters, value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value }))
-    setPagination(prev => ({ ...prev, current_page: 1 }))
-  }
-
-  const handlePageChange = (page: number) => {
-    setPagination(prev => ({ ...prev, current_page: page }))
-    fetchTransactions(page)
+  const handleFilterChange = (key: keyof SearchFilters, value: string | DateRange | undefined) => {
+    setFilters((prev) => ({ ...prev, [key]: value }))
   }
 
   const handleResetFilters = () => {
     setFilters({
       searchTerm: "",
-      status: "SUCCESSFUL",
-      payInStatus: "all",
-      sendAsset: "all",
-      receiveCurrency: "all",
-      provider: "all",
-      dateRange: undefined
+      trans_type: "all",
+      status: "all",
+      dateRange: {
+        from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        to: new Date(),
+      }
     })
-    setPagination(prev => ({ ...prev, current_page: 1 }))
   }
 
   const formatDate = (dateString: string) => {
@@ -192,67 +139,91 @@ const TransactionsTab = () => {
 
   const getStatusColor = (status: string) => {
     switch (status?.toUpperCase()) {
-      case "SUCCESSFUL":
+      case "SUCCESS":
         return "bg-green-100 text-green-800"
       case "PENDING":
         return "bg-yellow-100 text-yellow-800"
-      case "CANCELLED":
+      case "FAILED":
         return "bg-red-100 text-red-800"
-      case "EXPIRED":
-        return "bg-gray-100 text-gray-800"
       default:
         return "bg-gray-100 text-gray-800"
     }
   }
 
+  // Filter transactions based on current filters
+  const filteredTransactions = transactions.filter((transaction) => {
+    return (
+      (filters.trans_type === "all" || transaction.trans_type === filters.trans_type) &&
+      (filters.status === "all" || transaction.status === filters.status) &&
+      (!filters.searchTerm ||
+        transaction.trans_id.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+        transaction.amount.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+        transaction.asset_code.toLowerCase().includes(filters.searchTerm.toLowerCase()))
+    )
+  })
+
   const uniqueValues = {
-    sendAssets: Array.from(new Set(transactions.map(t => t.send_asset))),
-    receiveCurrencies: Array.from(new Set(transactions.map(t => t.receive_currency))),
-    providers: Array.from(new Set(transactions.map(t => t.service_provider.service.service_name)))
+    transTypes: Array.from(new Set(transactions.map(t => t.trans_type))),
+    assetCodes: Array.from(new Set(transactions.map(t => t.asset_code))),
+    currencies: Array.from(new Set(transactions.map(t => t.currency)))
   }
 
   return (
     <>
       <ProgressBar isLoading={isLoading} />
       <div className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="col-span-1 md:col-span-2">
+        {dateRange && (
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <h3 className="text-sm font-medium text-blue-900">Report Period</h3>
+            <p className="text-sm text-blue-700">
+              {formatDate(dateRange.start)} - {formatDate(dateRange.end)}
+            </p>
+            {responseFilters && (
+              <p className="text-sm text-blue-700">
+                Transaction Type: {responseFilters.trans_type}
+              </p>
+            )}
+          </div>
+        )}
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+          <div className="sm:col-span-2 xl:col-span-2">
             <Input
               type="text"
-              placeholder="Search by ID, account, narration or fee..."
+              placeholder="Search by ID, amount, or asset..."
               value={filters.searchTerm}
               onChange={(e) => handleFilterChange("searchTerm", e.target.value)}
             />
           </div>
-          <div>
+          <div className="xl:col-span-1">
             <DatePickerWithRange
               date={filters.dateRange}
               onDateChange={(range: DateRange | undefined) => setFilters(prev => ({ ...prev, dateRange: range }))}
             />
           </div>
-          <div>
-            <Select value={filters.sendAsset} onValueChange={(value) => handleFilterChange("sendAsset", value)}>
+          <div className="xl:col-span-1">
+            <Select value={filters.trans_type} onValueChange={(value) => handleFilterChange("trans_type", value)}>
               <SelectTrigger>
-                <SelectValue placeholder="Send Asset" />
+                <SelectValue placeholder="Transaction Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Assets</SelectItem>
-                {uniqueValues.sendAssets.map(asset => (
-                  <SelectItem key={asset} value={asset}>{asset}</SelectItem>
+                <SelectItem value="all">All Types</SelectItem>
+                {uniqueValues.transTypes.map(type => (
+                  <SelectItem key={type} value={type}>{type}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          <div>
-            <Select value={filters.receiveCurrency} onValueChange={(value) => handleFilterChange("receiveCurrency", value)}>
+          <div className="xl:col-span-1">
+            <Select value={filters.status} onValueChange={(value) => handleFilterChange("status", value)}>
               <SelectTrigger>
-                <SelectValue placeholder="Receive Currency" />
+                <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Currencies</SelectItem>
-                {uniqueValues.receiveCurrencies.map(currency => (
-                  <SelectItem key={currency} value={currency}>{currency}</SelectItem>
-                ))}
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="SUCCESS">Success</SelectItem>
+                <SelectItem value="PENDING">Pending</SelectItem>
+                <SelectItem value="FAILED">Failed</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -262,83 +233,62 @@ const TransactionsTab = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Date</TableHead>
-              <TableHead>From Amount</TableHead>
-              <TableHead>To Amount</TableHead>
-              <TableHead>Spread</TableHead>
-              <TableHead>Profit in pair</TableHead>
-              <TableHead>Exchange Rate</TableHead>
-              <TableHead>Fees</TableHead>
+              <TableHead>Transaction Type</TableHead>
+              <TableHead>Transaction ID</TableHead>
+              <TableHead>Amount</TableHead>
+              <TableHead>Asset Code</TableHead>
+              <TableHead>Currency</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Muda Fees</TableHead>
+              <TableHead>Provider Fees</TableHead>
+              <TableHead>Profit</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {transactions.length === 0 ? (
+            {filteredTransactions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={10} className="text-center py-8 text-gray-500">
                   No transactions found
                 </TableCell>
               </TableRow>
             ) : (
-              transactions.map((transaction) => (
+              filteredTransactions.map((transaction, index) => (
                 <TableRow 
-                  key={transaction.id}
+                  key={transaction.trans_id}
                   className="cursor-pointer hover:bg-gray-50"
                   onClick={() => setSelectedTransaction(transaction)}
                 >
-                  <TableCell>{formatDate(transaction.created_on)}</TableCell>
+                  <TableCell>{formatDate(transaction.created_at)}</TableCell>
                   <TableCell>
-                    {transaction.send_amount} {transaction.send_asset}
+                    <span className="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                      {transaction.trans_type}
+                    </span>
+                  </TableCell>
+                  <TableCell className="font-mono text-sm">{transaction.trans_id}</TableCell>
+                  <TableCell>
+                    {parseFloat(transaction.amount).toLocaleString()}
+                  </TableCell>
+                  <TableCell>{transaction.asset_code}</TableCell>
+                  <TableCell>{transaction.currency}</TableCell>
+                  <TableCell>
+                    <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(transaction.status)}`}>
+                      {transaction.status}
+                    </span>
                   </TableCell>
                   <TableCell>
-                    {transaction.receive_amount.toLocaleString()} {transaction.receive_currency}
+                    {transaction.muda_fees || "N/A"}
                   </TableCell>
                   <TableCell>
-                     {transaction?.tradeMetrics?.spreadPercentage ? Number(transaction?.tradeMetrics?.spreadPercentage).toFixed(2) : ""} %
+                    {transaction.provider_fees || "N/A"}
                   </TableCell>
                   <TableCell>
-                    {(transaction?.tradeMetrics?.profit) ? Number(transaction?.tradeMetrics?.profit).toFixed(2) : ""} {transaction.receive_currency}
-                  </TableCell>
-                  <TableCell>
-                    {Number(transaction.ex_rate).toFixed(2)}  {transaction.receive_currency}
-                  </TableCell>
-                  <TableCell>
-                    {Number(transaction.fee).toFixed(2)} {transaction.receive_currency}
+                    {transaction.profit || "N/A"}
                   </TableCell>
                 </TableRow>
               ))
             )}
           </TableBody>
         </Table>
-
-        {pagination.total_pages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(pagination.current_page - 1)}
-                disabled={!pagination.previous_page}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Previous
-              </Button>
-              <span className="text-sm text-gray-600">
-                Page {pagination.current_page} of {pagination.total_pages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(pagination.current_page + 1)}
-                disabled={!pagination.next_page}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="text-sm text-gray-600">
-              Showing {((pagination.current_page - 1) * pagination.items_per_page) + 1} to {Math.min(pagination.current_page * pagination.items_per_page, pagination.total_items)} of {pagination.total_items} entries
-            </div>
-          </div>
-        )}
 
         <Dialog open={!!selectedTransaction} onOpenChange={() => setSelectedTransaction(null)}>
           <DialogContent className="max-w-2xl">
@@ -350,11 +300,19 @@ const TransactionsTab = () => {
                 <div className="space-y-4">
                   <div>
                     <Label className="text-sm font-medium text-gray-500">Transaction ID</Label>
-                    <p className="mt-1 font-mono text-sm">{selectedTransaction.transId}</p>
+                    <p className="mt-1 font-mono text-sm">{selectedTransaction.trans_id}</p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-500">Date</Label>
-                    <p className="mt-1">{formatDate(selectedTransaction.created_on)}</p>
+                    <p className="mt-1">{formatDate(selectedTransaction.created_at)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Transaction Type</Label>
+                    <p className="mt-1">
+                      <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+                        {selectedTransaction.trans_type}
+                      </span>
+                    </p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-500">Status</Label>
@@ -365,57 +323,33 @@ const TransactionsTab = () => {
                     </p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Pay-in Status</Label>
-                    <p className="mt-1">
-                      <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(selectedTransaction.pay_in_status)}`}>
-                        {selectedTransaction.pay_in_status}
-                      </span>
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-500">Provider</Label>
-                    <p className="mt-1">{selectedTransaction.service_provider.service.service_name}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-500">Network</Label>
-                    <p className="mt-1">{selectedTransaction.payment_method.network}</p>
+                    <Label className="text-sm font-medium text-gray-500">Asset Code</Label>
+                    <p className="mt-1">{selectedTransaction.asset_code}</p>
                   </div>
                 </div>
                 <div className="space-y-4">
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Send Amount</Label>
+                    <Label className="text-sm font-medium text-gray-500">Amount</Label>
                     <p className="mt-1">
-                      {selectedTransaction.send_amount} {selectedTransaction.send_asset}
+                      {parseFloat(selectedTransaction.amount).toLocaleString()} {selectedTransaction.currency}
                     </p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Receive Amount</Label>
-                    <p className="mt-1">
-                      {selectedTransaction.receive_amount.toLocaleString()} {selectedTransaction.receive_currency}
-                    </p>
+                    <Label className="text-sm font-medium text-gray-500">Currency</Label>
+                    <p className="mt-1">{selectedTransaction.currency}</p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Exchange Rate</Label>
-                    <p className="mt-1">{selectedTransaction.ex_rate}</p>
+                    <Label className="text-sm font-medium text-gray-500">Muda Fees</Label>
+                    <p className="mt-1">{selectedTransaction.muda_fees || "N/A"}</p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Fee</Label>
-                    <p className="mt-1">{selectedTransaction.fee}</p>
+                    <Label className="text-sm font-medium text-gray-500">Provider Fees</Label>
+                    <p className="mt-1">{selectedTransaction.provider_fees || "N/A"}</p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Account Name</Label>
-                    <p className="mt-1">{selectedTransaction.payment_method.account_name}</p>
+                    <Label className="text-sm font-medium text-gray-500">Profit</Label>
+                    <p className="mt-1">{selectedTransaction.profit || "N/A"}</p>
                   </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-500">Phone Number</Label>
-                    <p className="mt-1">{selectedTransaction.payment_method.phone_number}</p>
-                  </div>
-                  {selectedTransaction.narration && (
-                    <div>
-                      <Label className="text-sm font-medium text-gray-500">Narration</Label>
-                      <p className="mt-1">{selectedTransaction.narration}</p>
-                    </div>
-                  )}
                 </div>
               </div>
             )}
