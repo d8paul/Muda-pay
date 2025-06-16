@@ -287,29 +287,12 @@ const MudaPayTab = () => {
           />
         </div>
 
-        {dateRange && (
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <h3 className="text-sm font-medium text-blue-900">Report Period</h3>
-            <p className="text-sm text-blue-700">
-              {formatDate(dateRange.start)} - {formatDate(dateRange.end)}
-            </p>
-            {responseFilters && (
-              <p className="text-sm text-blue-700">
-                Transaction Type: {responseFilters.trans_type}
-              </p>
-            )}
-          </div>
-        )}
-        
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-medium text-blue-900">Total Muda Fees</h3>
-                <p className="text-xs text-blue-700">
-                  Based on {filteredTransactions.length} transactions
-                </p>
               </div>
               <div className="text-right">
                 <p className="text-xl font-bold text-blue-900">
@@ -326,9 +309,6 @@ const MudaPayTab = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-medium text-blue-900">Total Provider Fees</h3>
-                <p className="text-xs text-blue-700">
-                  Based on {filteredTransactions.length} transactions
-                </p>
               </div>
               <div className="text-right">
                 <p className="text-xl font-bold text-blue-900">
@@ -345,9 +325,6 @@ const MudaPayTab = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-medium text-green-900">Total Profit</h3>
-                <p className="text-xs text-green-700">
-                  Based on {filteredTransactions.length} transactions
-                </p>
               </div>
               <div className="text-right">
                 <p className="text-xl font-bold text-green-900">
@@ -360,9 +337,23 @@ const MudaPayTab = () => {
             </div>
           </div>
         </div>
+
+        {dateRange && (
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <h3 className="text-sm font-medium text-blue-900">Report Period</h3>
+            <p className="text-sm text-blue-700">
+              {formatDate(dateRange.start)} - {formatDate(dateRange.end)}
+            </p>
+            {responseFilters && (
+              <p className="text-sm text-blue-700">
+                Transaction Type: {responseFilters.trans_type}
+              </p>
+            )}
+          </div>
+        )}
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-          <div className="sm:col-span-2 xl:col-span-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="lg:col-span-2">
             <Input
               type="text"
               placeholder="Search by ID, amount, or asset..."
@@ -370,7 +361,7 @@ const MudaPayTab = () => {
               onChange={(e) => handleFilterChange("searchTerm", e.target.value)}
             />
           </div>
-          <div className="xl:col-span-1">
+          <div>
             <Select value={filters.datePreset} onValueChange={handleDatePresetChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Date Range" />
@@ -383,13 +374,7 @@ const MudaPayTab = () => {
               </SelectContent>
             </Select>
           </div>
-          <div className="xl:col-span-1">
-            <DatePickerWithRange
-              date={filters.dateRange}
-              onDateChange={(range: DateRange | undefined) => setFilters(prev => ({ ...prev, dateRange: range }))}
-            />
-          </div>
-          <div className="xl:col-span-1">
+          <div>
             <Select value={filters.currency} onValueChange={(value) => handleFilterChange("currency", value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Currency" />
@@ -398,6 +383,15 @@ const MudaPayTab = () => {
                 <SelectItem value="UGX">UGX</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+        </div>
+        
+        <div className="flex justify-center">
+          <div className="w-full max-w-md">
+            <DatePickerWithRange
+              date={filters.dateRange}
+              onDateChange={(range: DateRange | undefined) => setFilters(prev => ({ ...prev, dateRange: range }))}
+            />
           </div>
         </div>
 
