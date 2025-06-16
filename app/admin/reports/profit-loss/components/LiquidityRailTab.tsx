@@ -51,6 +51,41 @@ interface TransactionResponse {
 interface SearchFilters {
   searchTerm: string
   dateRange: DateRange | undefined
+  datePreset: string
+}
+
+// Helper function to get date ranges for presets
+const getDateRangeForPreset = (preset: string): DateRange | undefined => {
+  const today = new Date()
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  
+  switch (preset) {
+    case 'today':
+      return {
+        from: startOfToday,
+        to: today
+      }
+    case 'last_week':
+      return {
+        from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        to: today
+      }
+    case 'last_month':
+      return {
+        from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        to: today
+      }
+    case 'last_3_months':
+      return {
+        from: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
+        to: today
+      }
+    default:
+      return {
+        from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        to: today
+      }
+  }
 }
 
 const LiquidityRailTab = () => {
@@ -61,6 +96,7 @@ const LiquidityRailTab = () => {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null)
   const [filters, setFilters] = useState<SearchFilters>({
     searchTerm: "",
+    datePreset: "last_week",
     dateRange: {
       from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
       to: new Date(), // today
@@ -124,9 +160,19 @@ const LiquidityRailTab = () => {
     setFilters((prev) => ({ ...prev, [key]: value }))
   }
 
+  const handleDatePresetChange = (preset: string) => {
+    const newDateRange = getDateRangeForPreset(preset)
+    setFilters(prev => ({
+      ...prev,
+      datePreset: preset,
+      dateRange: newDateRange || prev.dateRange
+    }))
+  }
+
   const handleResetFilters = () => {
     setFilters({
       searchTerm: "",
+      datePreset: "last_week",
       dateRange: {
         from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
         to: new Date(),
@@ -245,7 +291,7 @@ const LiquidityRailTab = () => {
           </div>
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           <div className="sm:col-span-2 xl:col-span-2">
             <Input
               type="text"
@@ -253,6 +299,19 @@ const LiquidityRailTab = () => {
               value={filters.searchTerm}
               onChange={(e) => handleFilterChange("searchTerm", e.target.value)}
             />
+          </div>
+          <div className="xl:col-span-1">
+            <Select value={filters.datePreset} onValueChange={handleDatePresetChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Date Range" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="last_week">Last Week</SelectItem>
+                <SelectItem value="last_month">Last Month</SelectItem>
+                <SelectItem value="last_3_months">Last 3 Months</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="xl:col-span-1">
             <DatePickerWithRange
@@ -287,7 +346,7 @@ const LiquidityRailTab = () => {
                   onClick={() => setSelectedTransaction(transaction)}
                 >
                   <TableCell>{formatDate(transaction.created_on)}</TableCell>
-                  <TableCell className="font-mono text-sm">{transaction.transId}</TableCell>
+                  <TableCell className="font-mono text-sm">{transaction.transId || "N/A"}</TableCell>
                   <TableCell>
                     {parseFloat(transaction.amount).toLocaleString()} {transaction.currency}
                   </TableCell>

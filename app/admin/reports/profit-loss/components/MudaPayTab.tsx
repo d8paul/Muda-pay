@@ -55,6 +55,41 @@ interface SearchFilters {
   searchTerm: string
   currency: string
   dateRange: DateRange | undefined
+  datePreset: string
+}
+
+// Helper function to get date ranges for presets
+const getDateRangeForPreset = (preset: string): DateRange | undefined => {
+  const today = new Date()
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  
+  switch (preset) {
+    case 'today':
+      return {
+        from: startOfToday,
+        to: today
+      }
+    case 'last_week':
+      return {
+        from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        to: today
+      }
+    case 'last_month':
+      return {
+        from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        to: today
+      }
+    case 'last_3_months':
+      return {
+        from: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
+        to: today
+      }
+    default:
+      return {
+        from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        to: today
+      }
+  }
 }
 
 const MudaPayTab = () => {
@@ -66,6 +101,7 @@ const MudaPayTab = () => {
   const [filters, setFilters] = useState<SearchFilters>({
     searchTerm: "",
     currency: "UGX",
+    datePreset: "last_week",
     dateRange: {
       from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
       to: new Date(), // today
@@ -121,10 +157,20 @@ const MudaPayTab = () => {
     setFilters((prev) => ({ ...prev, [key]: value }))
   }
 
+  const handleDatePresetChange = (preset: string) => {
+    const newDateRange = getDateRangeForPreset(preset)
+    setFilters(prev => ({
+      ...prev,
+      datePreset: preset,
+      dateRange: newDateRange || prev.dateRange
+    }))
+  }
+
   const handleResetFilters = () => {
     setFilters({
       searchTerm: "",
       currency: "UGX",
+      datePreset: "last_week",
       dateRange: {
         from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
         to: new Date(),
@@ -160,10 +206,20 @@ const MudaPayTab = () => {
     )
   })
 
-  // Calculate total profit from filtered transactions
+  // Calculate totals from filtered transactions
   const totalProfit = filteredTransactions.reduce((sum, transaction) => {
     const profit = parseFloat(transaction.profit) || 0
     return sum + profit
+  }, 0)
+
+  const totalMudaFees = filteredTransactions.reduce((sum, transaction) => {
+    const mudaFees = parseFloat(transaction.muda_fees) || 0
+    return sum + mudaFees
+  }, 0)
+
+  const totalProviderFees = filteredTransactions.reduce((sum, transaction) => {
+    const providerFees = parseFloat(transaction.provider_fees) || 0
+    return sum + providerFees
   }, 0)
 
   // Get the selected currency for display
@@ -187,6 +243,20 @@ const MudaPayTab = () => {
     {
       label: 'Total Transactions',
       value: filteredTransactions.length.toString()
+    },
+    {
+      label: 'Total Muda Fees',
+      value: `${selectedCurrency} ${totalMudaFees.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      })}`
+    },
+    {
+      label: 'Total Provider Fees',
+      value: `${selectedCurrency} ${totalProviderFees.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      })}`
     },
     {
       label: 'Total Profit',
@@ -231,28 +301,67 @@ const MudaPayTab = () => {
           </div>
         )}
         
-        {/* Total Profit Summary */}
-        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-medium text-blue-900">Total Profit</h3>
-              <p className="text-xs text-blue-700">
-                Based on {filteredTransactions.length} transactions in selected range
-              </p>
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-medium text-blue-900">Total Muda Fees</h3>
+                <p className="text-xs text-blue-700">
+                  Based on {filteredTransactions.length} transactions
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-xl font-bold text-blue-900">
+                  {selectedCurrency} {totalMudaFees.toLocaleString('en-US', { 
+                    minimumFractionDigits: 2, 
+                    maximumFractionDigits: 2 
+                  })}
+                </p>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold text-blue-900">
-                {selectedCurrency} {totalProfit.toLocaleString('en-US', { 
-                  minimumFractionDigits: 2, 
-                  maximumFractionDigits: 2 
-                })}
-              </p>
-              <p className="text-xs text-blue-700">Total Profit</p>
+          </div>
+
+          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-medium text-blue-900">Total Provider Fees</h3>
+                <p className="text-xs text-blue-700">
+                  Based on {filteredTransactions.length} transactions
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-xl font-bold text-blue-900">
+                  {selectedCurrency} {totalProviderFees.toLocaleString('en-US', { 
+                    minimumFractionDigits: 2, 
+                    maximumFractionDigits: 2 
+                  })}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-medium text-green-900">Total Profit</h3>
+                <p className="text-xs text-green-700">
+                  Based on {filteredTransactions.length} transactions
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-xl font-bold text-green-900">
+                  {selectedCurrency} {totalProfit.toLocaleString('en-US', { 
+                    minimumFractionDigits: 2, 
+                    maximumFractionDigits: 2 
+                  })}
+                </p>
+              </div>
             </div>
           </div>
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           <div className="sm:col-span-2 xl:col-span-2">
             <Input
               type="text"
@@ -260,6 +369,19 @@ const MudaPayTab = () => {
               value={filters.searchTerm}
               onChange={(e) => handleFilterChange("searchTerm", e.target.value)}
             />
+          </div>
+          <div className="xl:col-span-1">
+            <Select value={filters.datePreset} onValueChange={handleDatePresetChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Date Range" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="last_week">Last Week</SelectItem>
+                <SelectItem value="last_month">Last Month</SelectItem>
+                <SelectItem value="last_3_months">Last 3 Months</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="xl:col-span-1">
             <DatePickerWithRange
@@ -423,4 +545,4 @@ const MudaPayTab = () => {
   )
 }
 
-export default MudaPayTab 
+export default MudaPayTab
