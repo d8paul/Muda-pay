@@ -161,7 +161,7 @@ export default function PendingUsers() {
 
       const response = await put(`/admin/users/${selectedUser.id}/add/reject`, payload)
 
-      if (response.status === 201) {
+      if (response.status === 201 || response.status === 200) {
         toast.success(response.message || "User rejected successfully")
         fetchPendingUsers()
         setShowRejectDialog(false)
@@ -190,7 +190,7 @@ export default function PendingUsers() {
 
       const response = await put(`/admin/users/${selectedUser.id}/add/${action}`, payload)
 
-      if (response.status === 201) {
+      if (response.status === 201 || response.status === 200) {
         toast.success(response.message || "User added successfully")
         fetchPendingUsers()
       } else {

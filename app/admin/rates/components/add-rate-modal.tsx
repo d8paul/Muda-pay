@@ -100,7 +100,7 @@ export default function AddRateModal({ open, onClose, onSuccess }: AddRateModalP
     await requireTwoFactorAuth(rateData, async (data: any, token?: string) => {
       try {
         const response = await post("/admin/pair/prices", { ...data, token })
-        if (response.status === 201) {
+        if (response.status === 200) {
           setShow2FAModal(false)
           toast.success("Pair Price Rate created successfully")
           onSuccess()

@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { useTwoFactorAuth } from "@/hooks/useTwoFactorAuth";
+import TwoFactorAuthDialog from "@/components/TwoFactorAuthDialog";
 import {
   Table,
   TableBody,
@@ -53,6 +55,22 @@ export default function FeeProducts() {
   const [transactionTypeFilter, setTransactionTypeFilter] = useState<string>("all");
   const [currencyFilter, setCurrencyFilter] = useState<string>("all");
 
+  // Initialize 2FA hook
+  const { 
+    show2FAModal, 
+    setShow2FAModal, 
+    isLoading: is2FALoading, 
+    requireTwoFactorAuth, 
+    handle2FASubmit 
+  } = useTwoFactorAuth({
+    onSuccess: () => {
+      // Success is handled in performFeeProductUpdate
+    },
+    onError: (error) => {
+      // Error is handled in performFeeProductUpdate
+    }
+  });
+
   useEffect(() => {
     loadProducts();
   }, []);
@@ -88,24 +106,40 @@ export default function FeeProducts() {
     e.preventDefault();
     if (!editingProduct) return;
 
+    // Prepare the payload for the API
+    const payload = {
+      status: editingProduct.status,
+      fee_type: editingProduct.fee_type,
+      fee_amount: editingProduct.fee_amount
+    };
+
+    // Use 2FA flow for fee product update
+    await requireTwoFactorAuth(payload, performFeeProductUpdate);
+  };
+
+  // Function that performs the actual fee product update (called after 2FA verification)
+  const performFeeProductUpdate = async (data: any, token?: string) => {
+    if (!editingProduct) return;
+    
     setIsLoading(true);
     try {
-      await put(`/admin/fees/products/${editingProduct.product_id}`, {
-        status: editingProduct.status,
-        fee_type: editingProduct.fee_type,
-        fee_amount: editingProduct.fee_amount
-      });
-
-      // Close dialog and show notification first
+      // Include 2FA token in payload if provided
+      const payload = token ? { ...data, token } : data;
+      
+      // API call to update fee product
+      await put(`/admin/fees/products/${editingProduct.product_id}`, payload);
+      
+      // Success handling
       setIsDialogOpen(false);
       setEditingProduct(null);
       toast.success("Fee product updated successfully");
-
-      // Fetch fresh data from the server
+      
+      // Refresh the products list
       await loadProducts();
     } catch (error) {
       console.error("Error updating fee product:", error);
       toast.error("Failed to update fee product");
+      throw error; // Important to throw the error so the hook can handle it
     } finally {
       setIsLoading(false);
     }
@@ -309,8 +343,8 @@ export default function FeeProducts() {
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading ? "Saving..." : "Save Changes"}
+                <Button type="submit" disabled={isLoading || is2FALoading}>
+                  {isLoading || is2FALoading ? "Saving..." : "Save Changes"}
                 </Button>
               </div>
             </form>
@@ -393,6 +427,14 @@ export default function FeeProducts() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* 2FA Dialog */}
+      <TwoFactorAuthDialog
+        open={show2FAModal}
+        onOpenChange={setShow2FAModal}
+        onSubmit={handle2FASubmit}
+        isLoading={is2FALoading}
+      />
     </div>
   );
 } 

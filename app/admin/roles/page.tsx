@@ -23,10 +23,12 @@ import {
 import { Plus, Pencil, Trash2, Search, X, Eye, ChevronUp, ChevronDown, Copy } from "lucide-react"
 import toast from "react-hot-toast"
 import ProgressBar from "@/components/ProgressBar"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import AddRoleModal from "./components/add-role-modal"
 import EditRoleModal from "./components/edit-role-modal"
 import DeleteRoleModal from "./components/delete-role-modal"
 import DuplicateRoleModal from "./components/duplicate-role-modal"
+import PendingRoles from "./pending/page"
 import {
   Dialog,
   DialogContent,
@@ -189,7 +191,14 @@ export default function RolesPage() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
           <div className="py-4">
-            <Card className="p-4 mb-4">
+            <Tabs defaultValue="roles" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="roles">All Roles</TabsTrigger>
+                <TabsTrigger value="pending">Pending Roles</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="roles" className="mt-4">
+                <Card className="p-4 mb-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -380,6 +389,12 @@ export default function RolesPage() {
                 </div>
               </div>
             </Card>
+              </TabsContent>
+              
+              <TabsContent value="pending" className="mt-4">
+                <PendingRoles />
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>
