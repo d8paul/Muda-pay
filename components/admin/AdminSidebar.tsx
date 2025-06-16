@@ -82,7 +82,8 @@ const menuItems = [
       {
         name: "Profit and Loss",
         submenu: [
-          { name: "Transactions", path: "/admin/reports/profit-loss?tab=transactions" }
+          { name: "Muda Pay", path: "/admin/reports/profit-loss?tab=mudapay" },
+          { name: "Liquidity Rail", path: "/admin/reports/profit-loss?tab=liquidityrail" }
         ],
       },
       { name: "Volume", path: "/admin/reports/volume" },

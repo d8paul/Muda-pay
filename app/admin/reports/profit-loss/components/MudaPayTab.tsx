@@ -56,7 +56,7 @@ interface SearchFilters {
   dateRange: DateRange | undefined
 }
 
-const TransactionsTab = () => {
+const MudaPayTab = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [dateRange, setDateRange] = useState<DatePeriod | null>(null)
   const [responseFilters, setResponseFilters] = useState<Filters | null>(null)
@@ -162,6 +162,12 @@ const TransactionsTab = () => {
     )
   })
 
+  // Calculate total profit from filtered transactions
+  const totalProfit = filteredTransactions.reduce((sum, transaction) => {
+    const profit = parseFloat(transaction.profit) || 0
+    return sum + profit
+  }, 0)
+
   const uniqueValues = {
     transTypes: Array.from(new Set(transactions.map(t => t.trans_type))),
     assetCodes: Array.from(new Set(transactions.map(t => t.asset_code))),
@@ -185,6 +191,27 @@ const TransactionsTab = () => {
             )}
           </div>
         )}
+        
+        {/* Total Profit Summary */}
+        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-medium text-blue-900">Total Profit</h3>
+              <p className="text-xs text-blue-700">
+                Based on {filteredTransactions.length} transactions in selected range
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-bold text-blue-900">
+                {totalProfit.toLocaleString('en-US', { 
+                  minimumFractionDigits: 2, 
+                  maximumFractionDigits: 2 
+                })}
+              </p>
+              <p className="text-xs text-blue-700">Total Profit</p>
+            </div>
+          </div>
+        </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           <div className="sm:col-span-2 xl:col-span-2">
@@ -233,13 +260,11 @@ const TransactionsTab = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Date</TableHead>
-              <TableHead>Transaction Type</TableHead>
               <TableHead>Transaction ID</TableHead>
               <TableHead>Amount</TableHead>
               <TableHead>Asset Code</TableHead>
               <TableHead>Currency</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Muda Fees</TableHead>
               <TableHead>Provider Fees</TableHead>
               <TableHead>Profit</TableHead>
             </TableRow>
@@ -247,7 +272,7 @@ const TransactionsTab = () => {
           <TableBody>
             {filteredTransactions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                   No transactions found
                 </TableCell>
               </TableRow>
@@ -259,11 +284,6 @@ const TransactionsTab = () => {
                   onClick={() => setSelectedTransaction(transaction)}
                 >
                   <TableCell>{formatDate(transaction.created_at)}</TableCell>
-                  <TableCell>
-                    <span className="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
-                      {transaction.trans_type}
-                    </span>
-                  </TableCell>
                   <TableCell className="font-mono text-sm">{transaction.trans_id}</TableCell>
                   <TableCell>
                     {parseFloat(transaction.amount).toLocaleString()}
@@ -274,9 +294,6 @@ const TransactionsTab = () => {
                     <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(transaction.status)}`}>
                       {transaction.status}
                     </span>
-                  </TableCell>
-                  <TableCell>
-                    {transaction.muda_fees || "N/A"}
                   </TableCell>
                   <TableCell>
                     {transaction.provider_fees || "N/A"}
@@ -360,4 +377,4 @@ const TransactionsTab = () => {
   )
 }
 
-export default TransactionsTab 
+export default MudaPayTab 

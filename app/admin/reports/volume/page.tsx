@@ -23,6 +23,12 @@ import { DatePickerComponent as DatePicker } from "@/components/ui/date-picker"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Pagination } from "@/components/ui/pagination"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { get } from "@/utils/api"
 import FeesPageHeader from "@/components/admin/PageHeader"
 import ProgressBar from "@/components/ui/progress-bar"
@@ -59,6 +65,7 @@ export default function VolumeReport() {
   const [datePeriod, setDatePeriod] = useState<DatePeriod | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedReport, setSelectedReport] = useState<VolumeReport | null>(null)
   const [filters, setFilters] = useState({
     startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
     endDate: new Date(), // today
@@ -178,37 +185,33 @@ export default function VolumeReport() {
                   <TableRow>
                     <TableHead>Currency</TableHead>
                     <TableHead>Push Volume</TableHead>
-                    <TableHead>Pull Volume</TableHead>
-                    <TableHead>Swap Volume</TableHead>
-                    <TableHead>Bank Deposit Volume</TableHead>
                     <TableHead>Net Volume</TableHead>
-                    <TableHead>Total Movement</TableHead>
                     <TableHead>Transaction Count</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center">
+                      <TableCell colSpan={4} className="text-center">
                         Loading...
                       </TableCell>
                     </TableRow>
                   ) : filteredReports.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center">
+                      <TableCell colSpan={4} className="text-center">
                         No records found
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredReports.map((report, index) => (
-                      <TableRow key={index}>
+                      <TableRow 
+                        key={index}
+                        className="cursor-pointer hover:bg-gray-50"
+                        onClick={() => setSelectedReport(report)}
+                      >
                         <TableCell className="font-medium">{report.currency}</TableCell>
                         <TableCell>{parseFloat(report.push_volume).toLocaleString()}</TableCell>
-                        <TableCell>{parseFloat(report.pull_volume).toLocaleString()}</TableCell>
-                        <TableCell>{parseFloat(report.swap_volume).toLocaleString()}</TableCell>
-                        <TableCell>{parseFloat(report.bank_deposit_volume).toLocaleString()}</TableCell>
                         <TableCell className="font-medium">{parseFloat(report.net_volume).toLocaleString()}</TableCell>
-                        <TableCell className="font-medium">{parseFloat(report.total_movement).toLocaleString()}</TableCell>
                         <TableCell className="text-center">{report.transaction_count}</TableCell>
                       </TableRow>
                     ))
@@ -218,6 +221,54 @@ export default function VolumeReport() {
             </div>
           </div>
         </div>
+        
+        <Dialog open={!!selectedReport} onOpenChange={() => setSelectedReport(null)}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Volume Report Details - {selectedReport?.currency}</DialogTitle>
+            </DialogHeader>
+            {selectedReport && (
+              <div className="grid grid-cols-2 gap-4 py-4">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Currency</h4>
+                    <p className="mt-1 text-lg font-medium">{selectedReport.currency}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Push Volume</h4>
+                    <p className="mt-1">{parseFloat(selectedReport.push_volume).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Pull Volume</h4>
+                    <p className="mt-1">{parseFloat(selectedReport.pull_volume).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Swap Volume</h4>
+                    <p className="mt-1">{parseFloat(selectedReport.swap_volume).toLocaleString()}</p>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Bank Deposit Volume</h4>
+                    <p className="mt-1">{parseFloat(selectedReport.bank_deposit_volume).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Net Volume</h4>
+                    <p className="mt-1 text-lg font-medium">{parseFloat(selectedReport.net_volume).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Total Movement</h4>
+                    <p className="mt-1 text-lg font-medium">{parseFloat(selectedReport.total_movement).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Transaction Count</h4>
+                    <p className="mt-1 text-lg font-medium">{selectedReport.transaction_count}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </>
   )
