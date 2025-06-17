@@ -284,16 +284,16 @@ const LiquidityRailTab = () => {
   const exportFields: ExportField[] = [
     { key: 'created_on', label: 'Date', type: 'date' },
     { key: 'transId', label: 'Transaction ID', type: 'string' },
-    { key: 'send_amount', label: 'Send Amount', type: 'string' },
+    { key: 'fee_currency', label: 'Currency', type: 'string', format: (value) => value || "Unknown" },
+    { key: 'send_amount', label: 'Amount', type: 'number', format: (value) => parseFloat(value || '0').toFixed(4) },
+    { key: 'muda_fee', label: 'Muda Fee', type: 'number', format: (value) => parseFloat(value || '0').toFixed(4) },
+    { key: 'blockchain_fee', label: 'Blockchain Fee', type: 'number', format: (value) => parseFloat(value || '0').toFixed(4) },
+    { key: 'thirdparty_fee', label: 'Third Party Fee', type: 'number', format: (value) => parseFloat(value || '0').toFixed(4) },
+    { key: 'muda_fee', label: 'Profit', type: 'number', format: (value) => parseFloat(value || '0').toFixed(4) },
     { key: 'send_asset', label: 'Send Asset', type: 'string' },
     { key: 'receive_amount', label: 'Receive Amount', type: 'number' },
     { key: 'receive_currency', label: 'Receive Currency', type: 'string' },
     { key: 'ex_rate', label: 'Exchange Rate', type: 'string' },
-    { key: 'muda_fee', label: 'Muda Fee', type: 'string' },
-    { key: 'blockchain_fee', label: 'Blockchain Fee', type: 'string' },
-    { key: 'thirdparty_fee', label: 'Total Fee', type: 'string' },
-    { key: 'muda_fee', label: 'Profit', type: 'string' },
-    { key: 'fee_currency', label: 'Fee Currency', type: 'string' },
     { key: 'status', label: 'Status', type: 'string' },
   ]
 
@@ -332,7 +332,7 @@ const LiquidityRailTab = () => {
         </div>
 
         {/* Date Range Display */}
-        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+        {/* <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
           <h3 className="text-sm font-medium text-blue-900">Report Period</h3>
           {filters.dateRange?.from && filters.dateRange?.to ? (
             <p className="text-sm text-blue-700">
@@ -341,7 +341,7 @@ const LiquidityRailTab = () => {
           ) : (
             <p className="text-sm text-blue-700">No date range selected</p>
           )}
-        </div>
+        </div> */}
         
         {/* Total Profit Summary */}
         <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
@@ -490,22 +490,28 @@ const LiquidityRailTab = () => {
                   <TableCell>{formatDate(transaction.created_on)}</TableCell>
                   <TableCell className="font-mono text-sm">{transaction.transId}</TableCell>
                   <TableCell>
-                    {transaction.send_asset}
+                    {transaction.fee_currency || "Unknown"}
                   </TableCell>
                   <TableCell>
-                    {parseFloat(transaction.send_amount).toLocaleString()}
+                    {transaction.send_amount ? parseFloat(transaction.send_amount).toFixed(4) : "N/A"}
                   </TableCell>
                   <TableCell>
-                    {transaction.muda_fee || "N/A"}
+                    {transaction.muda_fee ? parseFloat(transaction.muda_fee).toFixed(4) : "N/A"}
                   </TableCell>
                   <TableCell>
-                    {transaction.blockchain_fee || "N/A"}
+                    {transaction.blockchain_fee ? parseFloat(transaction.blockchain_fee).toFixed(4) : "N/A"}
                   </TableCell>
                   <TableCell>
-                    {transaction.thirdparty_fee || "N/A"}
+                    {(() => {
+                      const mudaFee = parseFloat(transaction.muda_fee) || 0;
+                      const blockchainFee = parseFloat(transaction.blockchain_fee) || 0;
+                      const thirdpartyFee = parseFloat(transaction.thirdparty_fee) || 0;
+                      const totalFee = mudaFee + blockchainFee + thirdpartyFee;
+                      return totalFee > 0 ? totalFee.toFixed(4) : "N/A";
+                    })()}
                   </TableCell>
                   <TableCell>
-                    {transaction.muda_fee || "N/A"}
+                    {transaction.muda_fee ? parseFloat(transaction.muda_fee).toFixed(4) : "N/A"}
                   </TableCell>
                 </TableRow>
               ))
