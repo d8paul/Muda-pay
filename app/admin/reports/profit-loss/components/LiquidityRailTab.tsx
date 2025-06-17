@@ -343,20 +343,22 @@ const LiquidityRailTab = () => {
         </div> */}
         
         {/* Total Profit Summary */}
-        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-medium text-blue-900">Total Profit</h3>
-            </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold text-blue-900">
-                {totalProfit.toLocaleString('en-US', { 
-                  minimumFractionDigits: 4, 
-                  maximumFractionDigits: 4 
-                })}
-                {selectedCurrencyDisplay && ` ${selectedCurrencyDisplay}`}
-              </p>
-              <p className="text-xs text-blue-700">Total Profit</p>
+        <div className="w-1/3">
+          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-medium text-blue-900">Total Profit</h3>
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-bold text-blue-900">
+                  {totalProfit.toLocaleString('en-US', { 
+                    minimumFractionDigits: 4, 
+                    maximumFractionDigits: 4 
+                  })}
+                  {selectedCurrencyDisplay && ` ${selectedCurrencyDisplay}`}
+                </p>
+                <p className="text-xs text-blue-700">Total Profit</p>
+              </div>
             </div>
           </div>
         </div>
