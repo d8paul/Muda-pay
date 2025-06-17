@@ -84,11 +84,9 @@ const getDateRangeForPreset = (preset: string): DateRange | undefined => {
         from: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
         to: today
       }
+    case 'custom':
     default:
-      return {
-        from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-        to: today
-      }
+      return undefined
   }
 }
 
@@ -206,20 +204,10 @@ const MudaPayTab = () => {
     )
   })
 
-  // Calculate totals from filtered transactions
+  // Calculate total profit from filtered transactions
   const totalProfit = filteredTransactions.reduce((sum, transaction) => {
     const profit = parseFloat(transaction.profit) || 0
     return sum + profit
-  }, 0)
-
-  const totalMudaFees = filteredTransactions.reduce((sum, transaction) => {
-    const mudaFees = parseFloat(transaction.muda_fees) || 0
-    return sum + mudaFees
-  }, 0)
-
-  const totalProviderFees = filteredTransactions.reduce((sum, transaction) => {
-    const providerFees = parseFloat(transaction.provider_fees) || 0
-    return sum + providerFees
   }, 0)
 
   // Get the selected currency for display
@@ -230,7 +218,9 @@ const MudaPayTab = () => {
     { key: 'created_at', label: 'Date', type: 'date' },
     { key: 'trans_id', label: 'Transaction ID', type: 'string' },
     { key: 'amount', label: 'Amount', type: 'currency' },
+    { key: 'asset_code', label: 'Asset Code', type: 'string' },
     { key: 'currency', label: 'Currency', type: 'string' },
+    { key: 'status', label: 'Status', type: 'string' },
     { key: 'provider_fees', label: 'Provider Fees', type: 'currency' },
     { key: 'muda_fees', label: 'Muda Fees', type: 'currency' },
     { key: 'profit', label: 'Profit', type: 'currency' },
@@ -241,20 +231,6 @@ const MudaPayTab = () => {
     {
       label: 'Total Transactions',
       value: filteredTransactions.length.toString()
-    },
-    {
-      label: 'Total Muda Fees',
-      value: `${selectedCurrency} ${totalMudaFees.toLocaleString('en-US', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      })}`
-    },
-    {
-      label: 'Total Provider Fees',
-      value: `${selectedCurrency} ${totalProviderFees.toLocaleString('en-US', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      })}`
     },
     {
       label: 'Total Profit',
@@ -285,57 +261,6 @@ const MudaPayTab = () => {
           />
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-medium text-blue-900">Total Muda Fees</h3>
-              </div>
-              <div className="text-right">
-                <p className="text-xl font-bold text-blue-900">
-                  {selectedCurrency} {totalMudaFees.toLocaleString('en-US', { 
-                    minimumFractionDigits: 2, 
-                    maximumFractionDigits: 2 
-                  })}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-medium text-blue-900">Total Provider Fees</h3>
-              </div>
-              <div className="text-right">
-                <p className="text-xl font-bold text-blue-900">
-                  {selectedCurrency} {totalProviderFees.toLocaleString('en-US', { 
-                    minimumFractionDigits: 2, 
-                    maximumFractionDigits: 2 
-                  })}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-medium text-green-900">Total Profit</h3>
-              </div>
-              <div className="text-right">
-                <p className="text-xl font-bold text-green-900">
-                  {selectedCurrency} {totalProfit.toLocaleString('en-US', { 
-                    minimumFractionDigits: 2, 
-                    maximumFractionDigits: 2 
-                  })}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {dateRange && (
           <div className="bg-blue-50 p-4 rounded-lg">
             <h3 className="text-sm font-medium text-blue-900">Report Period</h3>
@@ -350,46 +275,113 @@ const MudaPayTab = () => {
           </div>
         )}
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="lg:col-span-2">
-            <Input
-              type="text"
-              placeholder="Search by ID, amount, or asset..."
-              value={filters.searchTerm}
-              onChange={(e) => handleFilterChange("searchTerm", e.target.value)}
-            />
-          </div>
-          <div>
-            <Select value={filters.datePreset} onValueChange={handleDatePresetChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Date Range" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="today">Today</SelectItem>
-                <SelectItem value="last_week">Last Week</SelectItem>
-                <SelectItem value="last_month">Last Month</SelectItem>
-                <SelectItem value="last_3_months">Last 3 Months</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Select value={filters.currency} onValueChange={(value) => handleFilterChange("currency", value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Currency" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="UGX">UGX</SelectItem>
-              </SelectContent>
-            </Select>
+        {/* Total Profit Summary */}
+        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-medium text-blue-900">Total Profit</h3>
+              <p className="text-xs text-blue-700">
+                Based on {filteredTransactions.length} transactions in selected range
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-bold text-blue-900">
+                {selectedCurrency} {totalProfit.toLocaleString('en-US', { 
+                  minimumFractionDigits: 2, 
+                  maximumFractionDigits: 2 
+                })}
+              </p>
+              <p className="text-xs text-blue-700">Total Profit</p>
+            </div>
           </div>
         </div>
         
-        <div className="flex justify-center">
-          <div className="w-full max-w-md">
-            <DatePickerWithRange
-              date={filters.dateRange}
-              onDateChange={(range: DateRange | undefined) => setFilters(prev => ({ ...prev, dateRange: range }))}
-            />
+        {/* Filters Section */}
+        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+          <div className="mb-3">
+            <h4 className="text-sm font-medium text-gray-900 mb-2">Filters</h4>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Search
+              </label>
+              <Input
+                type="text"
+                placeholder="Search by ID, amount, or asset..."
+                value={filters.searchTerm}
+                onChange={(e) => handleFilterChange("searchTerm", e.target.value)}
+                className="w-full"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Currency
+              </label>
+              <Select value={filters.currency} onValueChange={(value) => handleFilterChange("currency", value)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select currency" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="UGX">UGX</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Date Range
+              </label>
+              <Select value={filters.datePreset} onValueChange={handleDatePresetChange}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select range" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="today">Today</SelectItem>
+                  <SelectItem value="last_week">Last Week</SelectItem>
+                  <SelectItem value="last_month">Last Month</SelectItem>
+                  <SelectItem value="last_3_months">Last 3 Months</SelectItem>
+                  <SelectItem value="custom">Custom Range</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          {/* Custom Date Range - Show only when custom is selected */}
+          {filters.datePreset === 'custom' && (
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Custom Date Range
+              </label>
+              <DatePickerWithRange
+                date={filters.dateRange}
+                onDateChange={(range: DateRange | undefined) => setFilters(prev => ({ ...prev, dateRange: range, datePreset: 'custom' }))}
+              />
+            </div>
+          )}
+          
+          {/* Filter Summary */}
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
+              <span className="font-medium">Active Filters:</span>
+              {filters.searchTerm && (
+                <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
+                  Search: "{filters.searchTerm}"
+                </span>
+              )}
+              {filters.currency !== "all" && (
+                <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full">
+                  Currency: {filters.currency}
+                </span>
+              )}
+              {filters.dateRange?.from && filters.dateRange?.to && (
+                <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full">
+                  {filters.datePreset === 'custom' ? 'Custom' : filters.datePreset.replace('_', ' ')} Date Range
+                </span>
+              )}
+              {(!filters.searchTerm && filters.currency === "UGX" && !filters.dateRange?.from) && (
+                <span className="text-gray-500 italic">Default filters applied</span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -398,8 +390,8 @@ const MudaPayTab = () => {
             <TableRow>
               <TableHead>Date</TableHead>
               <TableHead>Transaction ID</TableHead>
-              <TableHead>Amount</TableHead>
               <TableHead>Currency</TableHead>
+              <TableHead>Amount</TableHead>
               <TableHead>Muda Fees</TableHead>
               <TableHead>Provider Fees</TableHead>
               <TableHead>Profit</TableHead>
@@ -421,10 +413,10 @@ const MudaPayTab = () => {
                 >
                   <TableCell>{formatDate(transaction.created_at)}</TableCell>
                   <TableCell className="font-mono text-sm">{transaction.trans_id}</TableCell>
+                  <TableCell>{transaction.currency}</TableCell>
                   <TableCell>
                     {parseFloat(transaction.amount).toLocaleString()}
                   </TableCell>
-                  <TableCell>{transaction.currency}</TableCell>
                   <TableCell>
                     {transaction.muda_fees ? parseFloat(transaction.muda_fees).toLocaleString('en-US', { 
                       minimumFractionDigits: 2, 

@@ -67,6 +67,14 @@ const menuItems = [
     ],
   },
   {
+    name: "Provider Fees",
+    icon: DocumentCurrencyDollarIcon,
+    submenu: [
+      { name: "Providers List", path: "/admin/provider-fees" },
+      { name: "Manage Fees", path: "/admin/provider-fees/manage" },
+    ],
+  },
+  {
     name: "Reports",
     icon: ChartBarIcon,
     submenu: [
