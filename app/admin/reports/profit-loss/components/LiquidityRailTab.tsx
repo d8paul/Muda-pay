@@ -499,13 +499,7 @@ const LiquidityRailTab = () => {
                     {transaction.blockchain_fee ? parseFloat(transaction.blockchain_fee).toFixed(4) : "N/A"}
                   </TableCell>
                   <TableCell>
-                    {(() => {
-                      const mudaFee = parseFloat(transaction.muda_fee) || 0;
-                      const blockchainFee = parseFloat(transaction.blockchain_fee) || 0;
-                      const thirdpartyFee = parseFloat(transaction.thirdparty_fee) || 0;
-                      const totalFee = mudaFee + blockchainFee + thirdpartyFee;
-                      return totalFee > 0 ? totalFee.toFixed(4) : "N/A";
-                    })()}
+                    {transaction.thirdparty_fee ? parseFloat(transaction.thirdparty_fee).toFixed(4) : "N/A"}
                   </TableCell>
                   <TableCell>
                     {transaction.muda_fee ? parseFloat(transaction.muda_fee).toFixed(4) : "N/A"}
