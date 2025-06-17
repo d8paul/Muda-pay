@@ -318,17 +318,16 @@ const LiquidityRailTab = () => {
         {/* Header with Title and Export Button */}
         <div className="flex justify-between items-center">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Liquidity Rail Transactions</h3>
-            <p className="text-sm text-gray-600">Analyze liquidity rail transaction profits and fees</p>
+            {/* <h3 className="text-lg font-semibold text-gray-900">Liquidity Rail Transactions</h3> */}
           </div>
-          <ExportButton
+          {/* <ExportButton
             data={filteredTransactions}
             fields={exportFields}
             filename={`liquidity-rail-report-${new Date().toISOString().split('T')[0]}`}
             title="Liquidity Rail Profit Report"
             dateRange={filters.dateRange}
             summary={exportSummary}
-          />
+          /> */}
         </div>
 
         {/* Date Range Display */}
@@ -348,10 +347,6 @@ const LiquidityRailTab = () => {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-sm font-medium text-blue-900">Total Profit</h3>
-              <p className="text-xs text-blue-700">
-                Based on {filteredTransactions.length} transactions in selected range
-                {selectedCurrencyDisplay && ` (${selectedCurrencyDisplay})`}
-              </p>
             </div>
             <div className="text-right">
               <p className="text-2xl font-bold text-blue-900">
@@ -575,17 +570,26 @@ const LiquidityRailTab = () => {
                     <Label className="text-sm font-medium text-gray-500">Provider Memo</Label>
                     <p className="mt-1">{selectedTransaction.provider_memo || "N/A"}</p>
                   </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-500">Muda Fee Log ID</Label>
-                    <p className="mt-1">{selectedTransaction.mudafeelog_id || "N/A"}</p>
+                  <div className="border-t pt-3">
+                    <Label className="text-sm font-medium text-gray-700">Fee Breakdown</Label>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Third Party Quote</Label>
-                    <p className="mt-1 font-mono text-xs break-all">{selectedTransaction.thirdparty_quote || "N/A"}</p>
+                    <Label className="text-sm font-medium text-gray-500">Calculated Total Fee</Label>
+                    <p className="mt-1 font-mono font-semibold text-green-700">
+                      {(() => {
+                        const mudaFee = parseFloat(selectedTransaction.muda_fee) || 0;
+                        const blockchainFee = parseFloat(selectedTransaction.blockchain_fee) || 0;
+                        const thirdpartyFee = parseFloat(selectedTransaction.thirdparty_fee) || 0;
+                        const totalFee = mudaFee + blockchainFee + thirdpartyFee;
+                        return totalFee > 0 ? `${totalFee.toFixed(4)} ${selectedTransaction.fee_currency || ''}` : "N/A";
+                      })()}
+                    </p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Third Party Rate</Label>
-                    <p className="mt-1">{selectedTransaction.thirdparty_rate || "N/A"}</p>
+                    <Label className="text-sm font-medium text-gray-500">Profit (Muda Fee)</Label>
+                    <p className="mt-1 font-mono font-semibold text-blue-700">
+                      {selectedTransaction.muda_fee ? `${parseFloat(selectedTransaction.muda_fee).toFixed(4)} ${selectedTransaction.fee_currency || ''}` : "N/A"}
+                    </p>
                   </div>
                 </div>
                 <div className="space-y-4">
@@ -630,16 +634,53 @@ const LiquidityRailTab = () => {
                     </p>
                   </div>
                   <div>
+                    <Label className="text-sm font-medium text-gray-500">Hash</Label>
+                    <p className="mt-1 font-mono text-xs break-all">{selectedTransaction.hash || "N/A"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Muda Fee Log ID</Label>
+                    <p className="mt-1">{selectedTransaction.mudafeelog_id || "N/A"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Muda Fee</Label>
+                    <p className="mt-1 font-mono">
+                      {selectedTransaction.muda_fee ? parseFloat(selectedTransaction.muda_fee).toFixed(4) : "N/A"}
+                      {selectedTransaction.fee_currency && ` ${selectedTransaction.fee_currency}`}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Third Party Fee</Label>
+                    <p className="mt-1 font-mono">
+                      {selectedTransaction.thirdparty_fee ? parseFloat(selectedTransaction.thirdparty_fee).toFixed(4) : "N/A"}
+                      {selectedTransaction.fee_currency && ` ${selectedTransaction.fee_currency}`}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Third Party Quote</Label>
+                    <p className="mt-1 font-mono text-xs break-all">{selectedTransaction.thirdparty_quote || "N/A"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Third Party Rate</Label>
+                    <p className="mt-1 font-mono">
+                      {selectedTransaction.thirdparty_rate ? parseFloat(selectedTransaction.thirdparty_rate).toFixed(4) : "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Blockchain Fee</Label>
+                    <p className="mt-1 font-mono">
+                      {selectedTransaction.blockchain_fee ? parseFloat(selectedTransaction.blockchain_fee).toFixed(4) : "N/A"}
+                      {selectedTransaction.blockchain_fee_asset && ` ${selectedTransaction.blockchain_fee_asset}`}
+                    </p>
+                  </div>
+                  <div>
                     <Label className="text-sm font-medium text-gray-500">Fee Currency</Label>
                     <p className="mt-1">{selectedTransaction.fee_currency || "N/A"}</p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Blockchain Fee Asset</Label>
-                    <p className="mt-1">{selectedTransaction.blockchain_fee_asset || "N/A"}</p>
-                  </div>
-                  <div>
                     <Label className="text-sm font-medium text-gray-500">Fee Log Rate</Label>
-                    <p className="mt-1">{selectedTransaction.fee_log_rate || "N/A"}</p>
+                    <p className="mt-1 font-mono">
+                      {selectedTransaction.fee_log_rate ? parseFloat(selectedTransaction.fee_log_rate).toFixed(4) : "N/A"}
+                    </p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-500">Fee Log Created At</Label>
@@ -648,10 +689,6 @@ const LiquidityRailTab = () => {
                   <div>
                     <Label className="text-sm font-medium text-gray-500">Narration</Label>
                     <p className="mt-1">{selectedTransaction.narration || "N/A"}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-500">Hash</Label>
-                    <p className="mt-1 font-mono text-xs break-all">{selectedTransaction.hash || "N/A"}</p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-500">Reason</Label>
