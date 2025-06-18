@@ -20,13 +20,44 @@ import ExportButton from "@/components/ui/export-button"
 import { ExportField } from "@/utils/exportService"
 
 interface Transaction {
-  created_on: string
-  ex_rate: string
+  id: number
   transId: string
-  amount: string
-  currency: string
-  spread: string
+  provider_id: string
+  company_id: number
+  send_asset: string
+  send_amount: string
+  receive_currency: string
+  receive_amount: number
+  payable_amount: string
+  ex_rate: string
+  account_number: string
+  service_id: string
+  receiver_address: string
+  pay_in_status: string
+  status: string
+  sending_address: string
+  response_body: string | null
+  reason: string | null
+  created_on: string
+  bank_name: string
+  bank_code: string
+  provider_ref_id: string
+  provider_address: string
+  provider_memo: string
   fee: string
+  fee_currency: string
+  payment_method_id: string
+  narration: string | null
+  hash: string | null
+  mudafeelog_id: number
+  muda_fee: string
+  thirdparty_fee: string
+  thirdparty_quote: string
+  thirdparty_rate: string
+  blockchain_fee: string
+  blockchain_fee_asset: string
+  fee_log_rate: string
+  fee_log_created_at: string
 }
 
 interface DatePeriod {
@@ -42,9 +73,9 @@ interface TransactionResponse {
   status: number
   message: string
   data: {
-    transactions: Transaction[]
-    dateRange: DatePeriod
-    filters: Filters
+    items: Transaction[]
+    dateRange?: DatePeriod
+    filters?: Filters
   }
 }
 
@@ -52,6 +83,7 @@ interface SearchFilters {
   searchTerm: string
   dateRange: DateRange | undefined
   datePreset: string
+  currency: string
 }
 
 // Helper function to get date ranges for presets
@@ -80,11 +112,9 @@ const getDateRangeForPreset = (preset: string): DateRange | undefined => {
         from: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
         to: today
       }
+    case 'custom':
     default:
-      return {
-        from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-        to: today
-      }
+      return undefined
   }
 }
 
@@ -97,6 +127,7 @@ const LiquidityRailTab = () => {
   const [filters, setFilters] = useState<SearchFilters>({
     searchTerm: "",
     datePreset: "last_week",
+    currency: "all",
     dateRange: {
       from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
       to: new Date(), // today
@@ -114,9 +145,13 @@ const LiquidityRailTab = () => {
       if (filters.dateRange?.to) {
         queryParams.append('end_date', filters.dateRange.to.toISOString().split('T')[0])
       }
+      // Don't send currency filter to API - we'll handle filtering on frontend
+      // This allows us to get all currencies and build the dropdown dynamically
 
       const response = await get(`/admin/reports/profit/liquidityrailnetwork?${queryParams.toString()}`)
       console.log("Liquidity Rail Response: ", response)
+      console.log("Response data type:", typeof response.data)
+      console.log("Response data:", response.data)
       
       if (response.status !== 200) {
         throw new Error(response.message || 'Failed to fetch liquidity rail profit reports')
@@ -133,14 +168,33 @@ const LiquidityRailTab = () => {
       let filtersData = null
       
       if (response.data) {
-        transactionsData = response.data.transactions || response.data || []
+        // Check if items is an array, if not use empty array
+        const rawTransactions = response.data.items || response.data.transactions || response.data || []
+        console.log("Raw transactions:", rawTransactions)
+        console.log("Raw transactions type:", typeof rawTransactions)
+        console.log("Is array?", Array.isArray(rawTransactions))
+        
+        transactionsData = Array.isArray(rawTransactions) ? rawTransactions : []
         dateRangeData = response.data.dateRange || null
         filtersData = response.data.filters || null
+        
+        console.log("Final transactions data:", transactionsData)
       }
       
       setTransactions(transactionsData)
       setDateRange(dateRangeData)
       setResponseFilters(filtersData)
+      
+      // Set default currency to first currency in the list if not already set
+      if (transactionsData.length > 0 && filters.currency === "all") {
+        const currencies = [...new Set(transactionsData.map((t: Transaction) => t.fee_currency || "Unknown"))]
+          .filter((currency): currency is string => Boolean(currency))
+          .sort()
+        
+        if (currencies.length > 0) {
+          setFilters(prev => ({ ...prev, currency: currencies[0] }))
+        }
+      }
     } catch (error) {
       console.error("Error fetching liquidity rail transactions:", error)
       toast.error("Failed to fetch liquidity rail transactions")
@@ -173,6 +227,7 @@ const LiquidityRailTab = () => {
     setFilters({
       searchTerm: "",
       datePreset: "last_week",
+      currency: "all",
       dateRange: {
         from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
         to: new Date(),
@@ -198,30 +253,48 @@ const LiquidityRailTab = () => {
   }
 
   // Filter transactions based on current filters
-  const filteredTransactions = transactions.filter((transaction) => {
-    return (
-      (!filters.searchTerm ||
-        transaction.transId.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-        transaction.amount.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-        transaction.currency.toLowerCase().includes(filters.searchTerm.toLowerCase()))
-    )
-  })
+  const filteredTransactions = Array.isArray(transactions) ? transactions.filter((transaction) => {
+    const matchesSearch = (!filters.searchTerm ||
+      transaction.transId.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+      transaction.send_amount.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+      transaction.send_asset.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+      transaction.receive_currency.toLowerCase().includes(filters.searchTerm.toLowerCase()))
+    
+    // Handle currency filtering - treat null fee_currency as "Unknown"
+    const transactionCurrency = transaction.fee_currency || "Unknown"
+    const matchesCurrency = filters.currency === "all" || transactionCurrency === filters.currency
 
-  // Calculate total profit from filtered transactions (fee is the profit)
+    return matchesSearch && matchesCurrency
+  }) : []
+
+  // Get unique profit currencies for filter dropdown (only fee_currency)
+  const uniqueCurrencies = Array.isArray(transactions) ? 
+    [...new Set(transactions.map(t => t.fee_currency || "Unknown"))].filter((currency): currency is string => Boolean(currency)).sort() : []
+
+  // Calculate total profit from filtered transactions (muda_fee is the profit)
   const totalProfit = filteredTransactions.reduce((sum, transaction) => {
-    const profit = parseFloat(transaction.fee) || 0
+    const profit = parseFloat(transaction.muda_fee) || 0
     return sum + profit
   }, 0)
+
+  // Get the selected currency for display
+  const selectedCurrencyDisplay = filters.currency === "all" ? "" : filters.currency
 
   // Export configuration
   const exportFields: ExportField[] = [
     { key: 'created_on', label: 'Date', type: 'date' },
     { key: 'transId', label: 'Transaction ID', type: 'string' },
-    { key: 'amount', label: 'Amount', type: 'currency' },
-    { key: 'currency', label: 'Currency', type: 'string' },
-    { key: 'spread', label: 'Spread', type: 'currency' },
-    { key: 'fee', label: 'Profit', type: 'currency' },
-    { key: 'ex_rate', label: 'Exchange Rate', type: 'number' },
+    { key: 'fee_currency', label: 'Currency', type: 'string', format: (value) => value || "Unknown" },
+    { key: 'send_amount', label: 'Amount', type: 'number', format: (value) => parseFloat(value || '0').toFixed(4) },
+    { key: 'muda_fee', label: 'Muda Fee', type: 'number', format: (value) => parseFloat(value || '0').toFixed(4) },
+    { key: 'blockchain_fee', label: 'Blockchain Fee', type: 'number', format: (value) => parseFloat(value || '0').toFixed(4) },
+    { key: 'thirdparty_fee', label: 'Third Party Fee', type: 'number', format: (value) => parseFloat(value || '0').toFixed(4) },
+    { key: 'muda_fee', label: 'Profit', type: 'number', format: (value) => parseFloat(value || '0').toFixed(4) },
+    { key: 'send_asset', label: 'Send Asset', type: 'string' },
+    { key: 'receive_amount', label: 'Receive Amount', type: 'number' },
+    { key: 'receive_currency', label: 'Receive Currency', type: 'string' },
+    { key: 'ex_rate', label: 'Exchange Rate', type: 'string' },
+    { key: 'status', label: 'Status', type: 'string' },
   ]
 
   const exportSummary = [
@@ -245,21 +318,20 @@ const LiquidityRailTab = () => {
         {/* Header with Title and Export Button */}
         <div className="flex justify-between items-center">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Liquidity Rail Transactions</h3>
-            <p className="text-sm text-gray-600">Analyze liquidity rail transaction profits and fees</p>
+            {/* <h3 className="text-lg font-semibold text-gray-900">Liquidity Rail Transactions</h3> */}
           </div>
-          <ExportButton
+          {/* <ExportButton
             data={filteredTransactions}
             fields={exportFields}
             filename={`liquidity-rail-report-${new Date().toISOString().split('T')[0]}`}
             title="Liquidity Rail Profit Report"
             dateRange={filters.dateRange}
             summary={exportSummary}
-          />
+          /> */}
         </div>
 
         {/* Date Range Display */}
-        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+        {/* <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
           <h3 className="text-sm font-medium text-blue-900">Report Period</h3>
           {filters.dateRange?.from && filters.dateRange?.to ? (
             <p className="text-sm text-blue-700">
@@ -268,56 +340,120 @@ const LiquidityRailTab = () => {
           ) : (
             <p className="text-sm text-blue-700">No date range selected</p>
           )}
-        </div>
+        </div> */}
         
         {/* Total Profit Summary */}
-        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-medium text-blue-900">Total Profit</h3>
-              <p className="text-xs text-blue-700">
-                Based on {filteredTransactions.length} transactions in selected range
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold text-blue-900">
-                {totalProfit.toLocaleString('en-US', { 
-                  minimumFractionDigits: 2, 
-                  maximumFractionDigits: 2 
-                })}
-              </p>
-              <p className="text-xs text-blue-700">Total Profit</p>
+        <div className="w-1/3">
+          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-medium text-blue-900">Total Profit</h3>
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-bold text-blue-900">
+                  {totalProfit.toLocaleString('en-US', { 
+                    minimumFractionDigits: 4, 
+                    maximumFractionDigits: 4 
+                  })}
+                  {selectedCurrencyDisplay && ` ${selectedCurrencyDisplay}`}
+                </p>
+                <p className="text-xs text-blue-700">Total Profit</p>
+              </div>
             </div>
           </div>
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          <div className="sm:col-span-2 xl:col-span-2">
-            <Input
-              type="text"
-              placeholder="Search by transaction ID, amount, or currency..."
-              value={filters.searchTerm}
-              onChange={(e) => handleFilterChange("searchTerm", e.target.value)}
-            />
+        {/* Filters Section */}
+        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+          <div className="mb-3">
+            <h4 className="text-sm font-medium text-gray-900 mb-2">Filters</h4>
           </div>
-          <div className="xl:col-span-1">
-            <Select value={filters.datePreset} onValueChange={handleDatePresetChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Date Range" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="today">Today</SelectItem>
-                <SelectItem value="last_week">Last Week</SelectItem>
-                <SelectItem value="last_month">Last Month</SelectItem>
-                <SelectItem value="last_3_months">Last 3 Months</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Search
+              </label>
+              <Input
+                type="text"
+                placeholder="Search by transaction ID, amount, or currency..."
+                value={filters.searchTerm}
+                onChange={(e) => handleFilterChange("searchTerm", e.target.value)}
+                className="w-full"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Profit Currency
+              </label>
+              <Select value={filters.currency} onValueChange={(value) => handleFilterChange("currency", value)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select currency" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Currencies</SelectItem>
+                  {uniqueCurrencies.map((currency) => (
+                    <SelectItem key={currency} value={currency}>
+                      {currency}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Date Range
+              </label>
+              <Select value={filters.datePreset} onValueChange={handleDatePresetChange}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select range" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="today">Today</SelectItem>
+                  <SelectItem value="last_week">Last Week</SelectItem>
+                  <SelectItem value="last_month">Last Month</SelectItem>
+                  <SelectItem value="last_3_months">Last 3 Months</SelectItem>
+                  <SelectItem value="custom">Custom Range</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <div className="xl:col-span-1">
-            <DatePickerWithRange
-              date={filters.dateRange}
-              onDateChange={(range: DateRange | undefined) => setFilters(prev => ({ ...prev, dateRange: range }))}
-            />
+          
+          {/* Custom Date Range - Show only when custom is selected */}
+          {filters.datePreset === 'custom' && (
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Custom Date Range
+              </label>
+              <DatePickerWithRange
+                date={filters.dateRange}
+                onDateChange={(range: DateRange | undefined) => setFilters(prev => ({ ...prev, dateRange: range, datePreset: 'custom' }))}
+              />
+            </div>
+          )}
+          
+          {/* Filter Summary */}
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
+              <span className="font-medium">Active Filters:</span>
+              {filters.searchTerm && (
+                <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
+                  Search: "{filters.searchTerm}"
+                </span>
+              )}
+              {filters.currency !== "all" && (
+                <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full">
+                  Currency: {filters.currency}
+                </span>
+              )}
+              {filters.dateRange?.from && filters.dateRange?.to && (
+                <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full">
+                  {filters.datePreset === 'custom' ? 'Custom' : filters.datePreset.replace('_', ' ')} Date Range
+                </span>
+              )}
+              {(!filters.searchTerm && filters.currency === "all" && !filters.dateRange?.from) && (
+                <span className="text-gray-500 italic">No filters applied</span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -326,15 +462,18 @@ const LiquidityRailTab = () => {
             <TableRow>
               <TableHead>Date</TableHead>
               <TableHead>Transaction ID</TableHead>
+              <TableHead>Currency</TableHead>
               <TableHead>Amount</TableHead>
-              <TableHead>Spread</TableHead>
+              <TableHead>Muda Fee</TableHead>
+              <TableHead>Blockchain Fee</TableHead>
+              <TableHead>Total Revenue</TableHead>
               <TableHead>Profit</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredTransactions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                   No transactions found
                 </TableCell>
               </TableRow>
@@ -346,15 +485,24 @@ const LiquidityRailTab = () => {
                   onClick={() => setSelectedTransaction(transaction)}
                 >
                   <TableCell>{formatDate(transaction.created_on)}</TableCell>
-                  <TableCell className="font-mono text-sm">{transaction.transId || "N/A"}</TableCell>
+                  <TableCell className="font-mono text-sm">{transaction.transId}</TableCell>
                   <TableCell>
-                    {parseFloat(transaction.amount).toLocaleString()} {transaction.currency}
+                    {transaction.fee_currency || "Unknown"}
                   </TableCell>
                   <TableCell>
-                    {transaction.spread || "N/A"}
+                    {transaction.send_amount ? parseFloat(transaction.send_amount).toFixed(4) : "N/A"}
                   </TableCell>
                   <TableCell>
-                    {transaction.fee || "N/A"}
+                    {transaction.muda_fee ? parseFloat(transaction.muda_fee).toFixed(4) : "N/A"}
+                  </TableCell>
+                  <TableCell>
+                    {transaction.blockchain_fee ? parseFloat(transaction.blockchain_fee).toFixed(4) : "N/A"}
+                  </TableCell>
+                  <TableCell>
+                    {transaction.thirdparty_fee ? parseFloat(transaction.thirdparty_fee).toFixed(4) : "N/A"}
+                  </TableCell>
+                  <TableCell>
+                    {transaction.muda_fee ? parseFloat(transaction.muda_fee).toFixed(4) : "N/A"}
                   </TableCell>
                 </TableRow>
               ))
@@ -371,36 +519,56 @@ const LiquidityRailTab = () => {
               <div className="grid grid-cols-2 gap-4 py-4">
                 <div className="space-y-4">
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Transaction ID</Label>
-                    <p className="mt-1 font-mono text-sm">{selectedTransaction.transId}</p>
+                    <Label className="text-sm font-medium text-gray-500">Hash</Label>
+                    <p className="mt-1 font-mono text-xs break-all">{selectedTransaction.hash || "N/A"}</p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Date</Label>
-                    <p className="mt-1">{formatDate(selectedTransaction.created_on)}</p>
+                    <Label className="text-sm font-medium text-gray-500">Muda Fee Log ID</Label>
+                    <p className="mt-1">{selectedTransaction.mudafeelog_id || "N/A"}</p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Exchange Rate</Label>
-                    <p className="mt-1">{selectedTransaction.ex_rate || "N/A"}</p>
+                    <Label className="text-sm font-medium text-gray-500">Muda Fee</Label>
+                    <p className="mt-1 font-mono">
+                      {selectedTransaction.muda_fee ? parseFloat(selectedTransaction.muda_fee).toFixed(8) : "N/A"}
+                    </p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Currency</Label>
-                    <p className="mt-1">{selectedTransaction.currency}</p>
+                    <Label className="text-sm font-medium text-gray-500">Third Party Fee</Label>
+                    <p className="mt-1 font-mono">
+                      {selectedTransaction.thirdparty_fee ? parseFloat(selectedTransaction.thirdparty_fee).toFixed(8) : "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Third Party Quote</Label>
+                    <p className="mt-1 font-mono text-xs break-all">{selectedTransaction.thirdparty_quote || "N/A"}</p>
                   </div>
                 </div>
                 <div className="space-y-4">
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Amount</Label>
-                    <p className="mt-1">
-                      {parseFloat(selectedTransaction.amount).toLocaleString()} {selectedTransaction.currency}
+                    <Label className="text-sm font-medium text-gray-500">Third Party Rate</Label>
+                    <p className="mt-1 font-mono">
+                      {selectedTransaction.thirdparty_rate ? parseFloat(selectedTransaction.thirdparty_rate).toFixed(8) : "N/A"}
                     </p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Spread</Label>
-                    <p className="mt-1">{selectedTransaction.spread || "N/A"}</p>
+                    <Label className="text-sm font-medium text-gray-500">Blockchain Fee</Label>
+                    <p className="mt-1 font-mono">
+                      {selectedTransaction.blockchain_fee ? parseFloat(selectedTransaction.blockchain_fee).toFixed(8) : "N/A"}
+                    </p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Fee (Profit)</Label>
-                    <p className="mt-1">{selectedTransaction.fee || "N/A"}</p>
+                    <Label className="text-sm font-medium text-gray-500">Blockchain Fee Asset</Label>
+                    <p className="mt-1">{selectedTransaction.blockchain_fee_asset || "N/A"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Fee Log Rate</Label>
+                    <p className="mt-1 font-mono">
+                      {selectedTransaction.fee_log_rate ? parseFloat(selectedTransaction.fee_log_rate).toFixed(8) : "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">Fee Log Created At</Label>
+                    <p className="mt-1">{selectedTransaction.fee_log_created_at ? formatDate(selectedTransaction.fee_log_created_at) : "N/A"}</p>
                   </div>
                 </div>
               </div>

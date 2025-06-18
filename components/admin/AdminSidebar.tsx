@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
@@ -14,14 +14,21 @@ import {
   ChartBarIcon,
   DocumentCurrencyDollarIcon,
   CurrencyDollarIcon,
+  BuildingOfficeIcon,
 } from "@heroicons/react/24/outline"
 
 import BavaPayLogo from "../BavaPayLogo"
 
 const menuItems = [
-  { name: "Dashboard", icon: HomeIcon, path: "/admin/dashboard" },
+  { 
+    name: "Dashboard", 
+    icon: HomeIcon, 
+    submenu: [
+      { name: "Overview", path: "/admin/dashboard" },
+      { name: "Transactions", path: "/admin/transactions" },
+    ]
+  },
   { name: "Wallet", icon: WalletIcon, path: "/admin/wallet" },
-  { name: "Transactions", icon: ClipboardDocumentListIcon, path: "/admin/transactions" },
   {
     name: "Deposits",
     icon: BanknotesIcon,
@@ -32,30 +39,28 @@ const menuItems = [
   },
   {
     name: "Business",
-    icon: UsersIcon,
+    icon: BuildingOfficeIcon,
     submenu: [
       { name: "Business List", path: "/admin/business/businesslist" },
-      { name: "Add Business", path: "/admin/business/addbusiness" },
-      { name: "Fee Products", path: "/admin/fees/products" }
+      { name: "Add Business", path: "/admin/business/addbusiness" }
    
     ],
   },
   {
-    name: "Users",
+    name: "System Users",
     icon: UsersIcon,
     submenu: [
       { name: "Users List", path: "/admin/users/list" },
       { name: "Add User", path: "/admin/users/add" },
       { name: "Pending Users", path: "/admin/users/pending" },
-    ],
-  },
-  {
-    name: "Roles",
-    icon: UsersIcon,
-    submenu: [
-      { name: "All Roles", path: "/admin/roles" },
-      { name: "Add Role", path: "/admin/roles/add" },
-      { name: "Pending Roles", path: "/admin/roles/pending" },
+      {
+        name: "Roles",
+        submenu: [
+          { name: "All Roles", path: "/admin/roles" },
+          { name: "Add Role", path: "/admin/roles/add" },
+          { name: "Pending Roles", path: "/admin/roles/pending" },
+        ],
+      },
     ],
   },
   {
@@ -66,19 +71,28 @@ const menuItems = [
       { name: "Pending Rates", path: "/admin/rates/pending" },
     ],
   },
+ {
+    name: "Fees",
+    icon: DocumentCurrencyDollarIcon,
+    submenu: [
+      { name: "Liquidity rail fees", path: "/admin/reports/liquidity-rail?tab=fees" },
+      { name: "Fee Products", path: "/admin/fees/products" }
+    ],
+  }, 
+  {
+    name: "Liquidity Rail",
+    icon: BanknotesIcon,
+    submenu: [
+      { name: "Transactions", path: "/admin/reports/liquidity-rail?tab=transactions" },
+      { name: "Clients", path: "/admin/reports/liquidity-rail?tab=clients" },
+      { name: "Providers", path: "/admin/reports/liquidity-rail?tab=providers" },
+      /* { name: "Fees", path: "/admin/reports/liquidity-rail?tab=fees" }, */
+    ],
+  },
   {
     name: "Reports",
     icon: ChartBarIcon,
     submenu: [
-      {
-        name: "Liquidity Rail",
-        submenu: [
-          { name: "Transactions", path: "/admin/reports/liquidity-rail?tab=transactions" },
-          { name: "Clients", path: "/admin/reports/liquidity-rail?tab=clients" },
-          { name: "Providers", path: "/admin/reports/liquidity-rail?tab=providers" },
-          { name: "Fees", path: "/admin/reports/liquidity-rail?tab=fees" },
-        ],
-      },
       {
         name: "Profit and Loss",
         submenu: [
@@ -89,7 +103,6 @@ const menuItems = [
       { name: "Volume", path: "/admin/reports/volume" },
       { name: "Collections", path: "/admin/reports/collections-report" },
       { name: "Payout", path: "/admin/reports/payout-report" },
-      { name: "Charges", path: "/admin/reports/charges-report" },
       { name: "Wallets", path: "/admin/reports/wallet-report" },
     ],
   },
@@ -100,12 +113,49 @@ export default function AdminSidebar() {
   const pathname = usePathname()
   const [openDropdowns, setOpenDropdowns] = useState<string[]>([])
 
-  const toggleDropdown = (name: string) => {
-    setOpenDropdowns((prev) => (prev.includes(name) ? prev.filter((item) => item !== name) : [...prev, name]))
+  const isActive = (path: string) => {
+    if (path.includes('?')) {
+      // For paths with query parameters, check if current pathname and search params match
+      const [pathPart, queryPart] = path.split('?')
+      return pathname === pathPart && (typeof window !== 'undefined' && window.location.search.includes(queryPart))
+    }
+    return pathname === path
   }
 
-  const isActive = (path: string) => {
-    return pathname === path
+  const isChildActive = (item: any): boolean => {
+    if (!item.submenu) return false
+    
+    return item.submenu.some((subItem: any) => {
+      if (subItem.submenu) {
+        return subItem.submenu.some((nestedItem: any) => isActive(nestedItem.path))
+      }
+      return isActive(subItem.path)
+    })
+  }
+
+  // Auto-open dropdowns if a child item is active
+  useEffect(() => {
+    const activeDropdowns: string[] = []
+    menuItems.forEach((item) => {
+      if (isChildActive(item)) {
+        activeDropdowns.push(item.name)
+        // Also check for nested submenus
+        if (item.submenu) {
+          item.submenu.forEach((subItem: any) => {
+            if (subItem.submenu && subItem.submenu.some((nested: any) => isActive(nested.path))) {
+              activeDropdowns.push(subItem.name)
+            }
+          })
+        }
+      }
+    })
+    if (activeDropdowns.length > 0) {
+      setOpenDropdowns(activeDropdowns)
+    }
+  }, [pathname])
+
+  const toggleDropdown = (name: string) => {
+    setOpenDropdowns((prev) => (prev.includes(name) ? prev.filter((item) => item !== name) : [...prev, name]))
   }
 
   const renderMenuItem = (item: any) => {
@@ -114,10 +164,18 @@ export default function AdminSidebar() {
         <div key={item.name}>
           <button
             onClick={() => toggleDropdown(item.name)}
-            className="w-full text-left text-gray-700 hover:bg-[#26a0ff] hover:text-white group flex items-center px-2 py-2 text-sm font-medium rounded-md"
+            className={`w-full text-left group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+              isChildActive(item)
+                ? "bg-[#26a0ff] text-white"
+                : "text-gray-700 hover:bg-[#26a0ff] hover:text-white"
+            }`}
           >
             <item.icon
-              className="text-gray-400 group-hover:text-white mr-3 flex-shrink-0 h-6 w-6"
+              className={`mr-3 flex-shrink-0 h-6 w-6 ${
+                isChildActive(item)
+                  ? "text-white"
+                  : "text-gray-400 group-hover:text-white"
+              }`}
               aria-hidden="true"
             />
             {item.name}
