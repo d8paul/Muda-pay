@@ -57,6 +57,25 @@ const FeesTab = ({ clientId }: FeesTabProps) => {
   const fetchCharges = async () => {
     setIsLoading(true)
     try {
+      // Direct implementation for staging testing
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+      const response = await fetch("https://rail.stage-mudax.xyz/admin/getCharges", {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        }
+      })
+      const data = await response.json()
+      console.log("Charges response:", data)
+      
+      if (response.ok && data.status === 200 && data.data) {
+        setCharges(Array.isArray(data.data) ? data.data : [])
+      } else {
+        throw new Error(data.message || 'Failed to fetch charges')
+      }
+
+      /* TODO: Future implementation with API utility
       const response = await get("/admin/liqudityrail/charges")
       console.log("Charges response:", response)
       
@@ -65,6 +84,7 @@ const FeesTab = ({ clientId }: FeesTabProps) => {
       } else {
         throw new Error(response.data?.message || 'Failed to fetch charges')
       }
+      */
     } catch (error) {
       console.error("Error fetching charges:", error)
       toast.error("Failed to fetch charges data")
@@ -100,6 +120,31 @@ const FeesTab = ({ clientId }: FeesTabProps) => {
         gas_fee: editFormData.gas_fee
       }
 
+      // Direct implementation for staging testing
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+      const response = await fetch(`https://rail.stage-mudax.xyz/admin/updateLRCharges`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          id: selectedCharge.id,
+          ...updateData
+        })
+      })
+      const data = await response.json()
+      
+      if (response.ok && data.status === 200) {
+        toast.success("Charge updated successfully")
+        setIsEditDialogOpen(false)
+        fetchCharges() // Refresh the data
+      } else {
+        throw new Error(data.message || 'Failed to update charge')
+      }
+
+      /* TODO: Future implementation with API utility
       const response = await put(`/admin/liqudityrail/charges/${selectedCharge.id}`, updateData)
       
       if (response.status === 200) {
@@ -109,6 +154,7 @@ const FeesTab = ({ clientId }: FeesTabProps) => {
       } else {
         throw new Error(response.data?.message || 'Failed to update charge')
       }
+      */
     } catch (error: any) {
       console.error("Error updating charge:", error)
       const errorMessage = error?.response?.data?.message || error?.message || "Failed to update charge"
@@ -142,7 +188,6 @@ const FeesTab = ({ clientId }: FeesTabProps) => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Asset</TableHead>
               <TableHead>Network</TableHead>
               <TableHead>Block Fee USD</TableHead>
               <TableHead>Muda Charges</TableHead>
@@ -160,7 +205,7 @@ const FeesTab = ({ clientId }: FeesTabProps) => {
             ) : (
               charges.map((charge) => (
                 <TableRow key={charge.id}>
-                  <TableCell className="font-medium">{charge.chain_code}</TableCell>
+                  {/* <TableCell className="font-medium">{charge.chain_code}</TableCell> */}
                   <TableCell>{charge.chain}</TableCell>
                   <TableCell>{parseFloat(charge.gas_fee).toFixed(4)}</TableCell>
                   <TableCell>{parseFloat(charge.muda_charge).toFixed(4)}</TableCell>

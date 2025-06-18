@@ -41,21 +41,20 @@ const menuItems = [
     ],
   },
   {
-    name: "Users",
+    name: "System Users",
     icon: UsersIcon,
     submenu: [
       { name: "Users List", path: "/admin/users/list" },
       { name: "Add User", path: "/admin/users/add" },
       { name: "Pending Users", path: "/admin/users/pending" },
-    ],
-  },
-  {
-    name: "Roles",
-    icon: UsersIcon,
-    submenu: [
-      { name: "All Roles", path: "/admin/roles" },
-      { name: "Add Role", path: "/admin/roles/add" },
-      { name: "Pending Roles", path: "/admin/roles/pending" },
+      {
+        name: "Roles",
+        submenu: [
+          { name: "All Roles", path: "/admin/roles" },
+          { name: "Add Role", path: "/admin/roles/add" },
+          { name: "Pending Roles", path: "/admin/roles/pending" },
+        ],
+      },
     ],
   },
   {
@@ -66,13 +65,13 @@ const menuItems = [
       { name: "Pending Rates", path: "/admin/rates/pending" },
     ],
   },
-  {
+ {
     name: "Fees",
     icon: DocumentCurrencyDollarIcon,
     submenu: [
-      { name: "Providers List", path: "/admin/provider-fees" },
+      { name: "Liquidity rail fees", path: "/admin/reports/liquidity-rail?tab=fees" },
     ],
-  },
+  }, 
   {
     name: "Liquidity Rail",
     icon: BanknotesIcon,
@@ -80,7 +79,7 @@ const menuItems = [
       { name: "Transactions", path: "/admin/reports/liquidity-rail?tab=transactions" },
       { name: "Clients", path: "/admin/reports/liquidity-rail?tab=clients" },
       { name: "Providers", path: "/admin/reports/liquidity-rail?tab=providers" },
-      { name: "Fees", path: "/admin/reports/liquidity-rail?tab=fees" },
+      /* { name: "Fees", path: "/admin/reports/liquidity-rail?tab=fees" }, */
     ],
   },
   {
