@@ -106,7 +106,7 @@ export default function PendingRoles() {
 
   // Memoize the fetch function
   const fetchPendingRoles = React.useCallback(async () => {
-    if (!hasPermission("roles.approve")) return
+    // if (!hasPermission("roles.approve")) return
 
     try {
       setIsLoading(true)
@@ -127,13 +127,13 @@ export default function PendingRoles() {
       setIsLoading(false)
     }
   }, []) // Remove hasPermission from dependencies
-  useEffect(() => {
-    // Check if user has permission to view pending roles
-    if (!hasPermission('roles.approve')) {
-      router.push('/admin/dashboard')
-      return
-    }
-  }, [hasPermission, router])
+  // useEffect(() => {
+  //   // Check if user has permission to view pending roles
+  //   if (!hasPermission('roles.approve')) {
+  //     router.push('/admin/dashboard')
+  //     return
+  //   }
+  // }, [hasPermission, router])
 
   // Initial fetch and permission check
   useEffect(() => {

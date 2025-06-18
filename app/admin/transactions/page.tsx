@@ -70,13 +70,13 @@ export default function TransactionsPage() {
   const { hasPermission } = usePermissions()
   const router = useRouter()
 
-  useEffect(() => {
-    // Check if user has permission to view transactions
-    if (!hasPermission('transactions.view')) {
-      router.push('/admin/dashboard')
-      return
-    }
-  }, [hasPermission, router])
+  // useEffect(() => {
+  //   // Check if user has permission to view transactions
+  //   if (!hasPermission('transactions.view')) {
+  //     router.push('/admin/dashboard')
+  //     return
+  //   }
+  // }, [hasPermission, router])
 
   useEffect(() => {
     const storedCurrency = localStorage.getItem("selectedCurrency")
@@ -99,9 +99,9 @@ export default function TransactionsPage() {
 
   const handleRowClick = (transaction: Transaction) => {
     // Check if user has permission to view transaction details
-    if (!hasPermission('transactions.view')) {
-      return
-    }
+    // if (!hasPermission('transactions.view')) {
+    //   return
+    // }
     setSelectedTransaction(transaction)
     setIsDetailsOpen(true)
   }
@@ -123,9 +123,9 @@ export default function TransactionsPage() {
   }
 
   // If user doesn't have permission, don't render the content
-  if (!hasPermission('transactions.view')) {
-    return null
-  }
+  // if (!hasPermission('transactions.view')) {
+  //   return null
+  // }
 
   return (
     <div className="py-6">
