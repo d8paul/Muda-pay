@@ -20,6 +20,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { DatePickerComponent as DatePicker } from "@/components/ui/date-picker"
+import { DatePickerWithRange } from "@/components/ui/date-range-picker"
+import { DateRange } from "react-day-picker"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Pagination } from "@/components/ui/pagination"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -62,6 +64,38 @@ interface VolumeReportResponse {
   }
 }
 
+// Helper function to get date ranges for presets
+const getDateRangeForPreset = (preset: string): DateRange | undefined => {
+  const today = new Date()
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  
+  switch (preset) {
+    case 'today':
+      return {
+        from: startOfToday,
+        to: today
+      }
+    case 'last_week':
+      return {
+        from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        to: today
+      }
+    case 'last_month':
+      return {
+        from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        to: today
+      }
+    case 'last_3_months':
+      return {
+        from: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
+        to: today
+      }
+    case 'custom':
+    default:
+      return undefined
+  }
+}
+
 export default function VolumeReport() {
   const [reports, setReports] = useState<VolumeReport[]>([])
   const [datePeriod, setDatePeriod] = useState<DatePeriod | null>(null)
@@ -69,8 +103,11 @@ export default function VolumeReport() {
   const [error, setError] = useState<string | null>(null)
   const [selectedReport, setSelectedReport] = useState<VolumeReport | null>(null)
   const [filters, setFilters] = useState({
-    startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
-    endDate: new Date(), // today
+    dateRange: {
+      from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
+      to: new Date(), // today
+    } as DateRange,
+    datePreset: "last_week",
     currency: "all",
   })
 
@@ -78,7 +115,7 @@ export default function VolumeReport() {
 
   useEffect(() => {
     fetchReports()
-  }, [filters])
+  }, [filters.dateRange, filters.currency])
 
   const fetchReports = async () => {
     try {
@@ -87,13 +124,13 @@ export default function VolumeReport() {
       
       // Build query parameters
       const params = new URLSearchParams()
-      if (filters.startDate) {
-        params.append('start_date', format(filters.startDate, 'yyyy-MM-dd'))
+      if (filters.dateRange?.from) {
+        params.append('start_date', format(filters.dateRange.from, 'yyyy-MM-dd'))
       } else {
         params.append('start_date', 'null')
       }
-      if (filters.endDate) {
-        params.append('end_date', format(filters.endDate, 'yyyy-MM-dd'))
+      if (filters.dateRange?.to) {
+        params.append('end_date', format(filters.dateRange.to, 'yyyy-MM-dd'))
       } else {
         params.append('end_date', 'null')
       }
@@ -114,6 +151,15 @@ export default function VolumeReport() {
 
   const handleFilterChange = (key: string, value: any) => {
     setFilters((prev) => ({ ...prev, [key]: value }))
+  }
+
+  const handleDatePresetChange = (preset: string) => {
+    const newDateRange = getDateRangeForPreset(preset)
+    setFilters(prev => ({
+      ...prev,
+      datePreset: preset,
+      dateRange: newDateRange || prev.dateRange
+    }))
   }
 
   // Get unique currencies from reports for filter dropdown
@@ -150,35 +196,59 @@ export default function VolumeReport() {
                 </div>
               )}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                <DatePicker
-                  selected={filters.startDate}
-                  onChange={(date: Date | null) => handleFilterChange("startDate", date)}
-                  placeholderText="Start Date"
-                />
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Date Range
+                  </label>
+                  <Select value={filters.datePreset} onValueChange={handleDatePresetChange}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select range" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="today">Today</SelectItem>
+                      <SelectItem value="last_week">Last Week</SelectItem>
+                      <SelectItem value="last_month">Last Month</SelectItem>
+                      <SelectItem value="last_3_months">Last 3 Months</SelectItem>
+                      <SelectItem value="custom">Custom Range</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                <DatePicker
-                  selected={filters.endDate}
-                  onChange={(date: Date | null) => handleFilterChange("endDate", date)}
-                  placeholderText="End Date"
-                />
-
-                <Select
-                  value={filters.currency}
-                  onValueChange={(value) => handleFilterChange("currency", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Currency" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Currencies</SelectItem>
-                    {availableCurrencies.map((currency) => (
-                      <SelectItem key={currency} value={currency}>
-                        {currency}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Currency
+                  </label>
+                  <Select
+                    value={filters.currency}
+                    onValueChange={(value) => handleFilterChange("currency", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Currency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Currencies</SelectItem>
+                      {availableCurrencies.map((currency) => (
+                        <SelectItem key={currency} value={currency}>
+                          {currency}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
+
+              {/* Custom Date Range - Show only when custom is selected */}
+              {filters.datePreset === 'custom' && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Custom Date Range
+                  </label>
+                  <DatePickerWithRange
+                    date={filters.dateRange}
+                    onDateChange={(range: DateRange | undefined) => setFilters(prev => ({ ...prev, dateRange: range || prev.dateRange, datePreset: 'custom' }))}
+                  />
+                </div>
+              )}
             </div>
 
             <div className="overflow-x-auto">
@@ -186,9 +256,9 @@ export default function VolumeReport() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Currency</TableHead>
-                    <TableHead>Push Volume</TableHead>
-                    <TableHead>Net Volume</TableHead>
-                    <TableHead>Transaction Count</TableHead>
+                    <TableHead>Collection</TableHead>
+                    <TableHead>Payout</TableHead>
+                    <TableHead>Total</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -212,9 +282,9 @@ export default function VolumeReport() {
                         onClick={() => setSelectedReport(report)}
                       >
                         <TableCell className="font-medium">{report.currency}</TableCell>
+                        <TableCell>{parseFloat(report.pull_volume).toLocaleString()}</TableCell>
                         <TableCell>{parseFloat(report.push_volume).toLocaleString()}</TableCell>
-                        <TableCell className="font-medium">{parseFloat(report.net_volume).toLocaleString()}</TableCell>
-                        <TableCell className="text-center">{report.transaction_count}</TableCell>
+                        <TableCell className="font-medium">{parseFloat(report.total_movement).toLocaleString()}</TableCell>
                       </TableRow>
                     ))
                   )}
