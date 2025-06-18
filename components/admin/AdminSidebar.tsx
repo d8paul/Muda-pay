@@ -14,6 +14,7 @@ import {
   ChartBarIcon,
   DocumentCurrencyDollarIcon,
   CurrencyDollarIcon,
+  BuildingOfficeIcon,
 } from "@heroicons/react/24/outline"
 
 import BavaPayLogo from "../BavaPayLogo"
@@ -38,7 +39,7 @@ const menuItems = [
   },
   {
     name: "Business",
-    icon: UsersIcon,
+    icon: BuildingOfficeIcon,
     submenu: [
       { name: "Business List", path: "/admin/business/businesslist" },
       { name: "Add Business", path: "/admin/business/addbusiness" }
