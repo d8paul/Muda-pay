@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
@@ -67,26 +67,26 @@ const menuItems = [
     ],
   },
   {
-    name: "Provider Fees",
+    name: "Fees",
     icon: DocumentCurrencyDollarIcon,
     submenu: [
       { name: "Providers List", path: "/admin/provider-fees" },
-      { name: "Manage Fees", path: "/admin/provider-fees/manage" },
+    ],
+  },
+  {
+    name: "Liquidity Rail",
+    icon: BanknotesIcon,
+    submenu: [
+      { name: "Transactions", path: "/admin/reports/liquidity-rail?tab=transactions" },
+      { name: "Clients", path: "/admin/reports/liquidity-rail?tab=clients" },
+      { name: "Providers", path: "/admin/reports/liquidity-rail?tab=providers" },
+      { name: "Fees", path: "/admin/reports/liquidity-rail?tab=fees" },
     ],
   },
   {
     name: "Reports",
     icon: ChartBarIcon,
     submenu: [
-      {
-        name: "Liquidity Rail",
-        submenu: [
-          { name: "Transactions", path: "/admin/reports/liquidity-rail?tab=transactions" },
-          { name: "Clients", path: "/admin/reports/liquidity-rail?tab=clients" },
-          { name: "Providers", path: "/admin/reports/liquidity-rail?tab=providers" },
-          { name: "Fees", path: "/admin/reports/liquidity-rail?tab=fees" },
-        ],
-      },
       {
         name: "Profit and Loss",
         submenu: [
@@ -108,12 +108,49 @@ export default function AdminSidebar() {
   const pathname = usePathname()
   const [openDropdowns, setOpenDropdowns] = useState<string[]>([])
 
-  const toggleDropdown = (name: string) => {
-    setOpenDropdowns((prev) => (prev.includes(name) ? prev.filter((item) => item !== name) : [...prev, name]))
+  const isActive = (path: string) => {
+    if (path.includes('?')) {
+      // For paths with query parameters, check if current pathname and search params match
+      const [pathPart, queryPart] = path.split('?')
+      return pathname === pathPart && (typeof window !== 'undefined' && window.location.search.includes(queryPart))
+    }
+    return pathname === path
   }
 
-  const isActive = (path: string) => {
-    return pathname === path
+  const isChildActive = (item: any): boolean => {
+    if (!item.submenu) return false
+    
+    return item.submenu.some((subItem: any) => {
+      if (subItem.submenu) {
+        return subItem.submenu.some((nestedItem: any) => isActive(nestedItem.path))
+      }
+      return isActive(subItem.path)
+    })
+  }
+
+  // Auto-open dropdowns if a child item is active
+  useEffect(() => {
+    const activeDropdowns: string[] = []
+    menuItems.forEach((item) => {
+      if (isChildActive(item)) {
+        activeDropdowns.push(item.name)
+        // Also check for nested submenus
+        if (item.submenu) {
+          item.submenu.forEach((subItem: any) => {
+            if (subItem.submenu && subItem.submenu.some((nested: any) => isActive(nested.path))) {
+              activeDropdowns.push(subItem.name)
+            }
+          })
+        }
+      }
+    })
+    if (activeDropdowns.length > 0) {
+      setOpenDropdowns(activeDropdowns)
+    }
+  }, [pathname])
+
+  const toggleDropdown = (name: string) => {
+    setOpenDropdowns((prev) => (prev.includes(name) ? prev.filter((item) => item !== name) : [...prev, name]))
   }
 
   const renderMenuItem = (item: any) => {
@@ -122,10 +159,18 @@ export default function AdminSidebar() {
         <div key={item.name}>
           <button
             onClick={() => toggleDropdown(item.name)}
-            className="w-full text-left text-gray-700 hover:bg-[#26a0ff] hover:text-white group flex items-center px-2 py-2 text-sm font-medium rounded-md"
+            className={`w-full text-left group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+              isChildActive(item)
+                ? "bg-[#26a0ff] text-white"
+                : "text-gray-700 hover:bg-[#26a0ff] hover:text-white"
+            }`}
           >
             <item.icon
-              className="text-gray-400 group-hover:text-white mr-3 flex-shrink-0 h-6 w-6"
+              className={`mr-3 flex-shrink-0 h-6 w-6 ${
+                isChildActive(item)
+                  ? "text-white"
+                  : "text-gray-400 group-hover:text-white"
+              }`}
               aria-hidden="true"
             />
             {item.name}
