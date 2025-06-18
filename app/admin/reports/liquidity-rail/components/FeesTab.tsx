@@ -238,11 +238,7 @@ const FeesTab = ({ clientId }: FeesTabProps) => {
             </DialogHeader>
             {selectedCharge && (
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 py-4">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-500">Asset</Label>
-                    <p className="mt-1 text-sm">{selectedCharge.chain_code}</p>
-                  </div>
+                <div className="grid grid-cols-1 gap-4 py-4">
                   <div>
                     <Label className="text-sm font-medium text-gray-500">Network</Label>
                     <p className="mt-1 text-sm">{selectedCharge.chain}</p>
