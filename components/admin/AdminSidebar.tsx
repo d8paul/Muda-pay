@@ -19,9 +19,15 @@ import {
 import BavaPayLogo from "../BavaPayLogo"
 
 const menuItems = [
-  { name: "Dashboard", icon: HomeIcon, path: "/admin/dashboard" },
+  { 
+    name: "Dashboard", 
+    icon: HomeIcon, 
+    submenu: [
+      { name: "Overview", path: "/admin/dashboard" },
+      { name: "Transactions", path: "/admin/transactions" },
+    ]
+  },
   { name: "Wallet", icon: WalletIcon, path: "/admin/wallet" },
-  { name: "Transactions", icon: ClipboardDocumentListIcon, path: "/admin/transactions" },
   {
     name: "Deposits",
     icon: BanknotesIcon,
