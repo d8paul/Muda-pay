@@ -25,7 +25,6 @@ const menuItems = [
     icon: HomeIcon, 
     submenu: [
       { name: "Overview", path: "/admin/dashboard" },
-      { name: "Transactions", path: "/admin/transactions" },
     ]
   },
   { name: "Wallet", icon: WalletIcon, path: "/admin/wallet" },
@@ -93,6 +92,7 @@ const menuItems = [
     name: "Reports",
     icon: ChartBarIcon,
     submenu: [
+      { name: "Transactions", path: "/admin/transactions" },
       {
         name: "Profit and Loss",
         submenu: [
@@ -101,8 +101,8 @@ const menuItems = [
         ],
       },
       { name: "Volume", path: "/admin/reports/volume" },
-      { name: "Collections", path: "/admin/reports/collections-report" },
-      { name: "Payout", path: "/admin/reports/payout-report" },
+      /* { name: "Collections", path: "/admin/reports/collections-report" },
+      { name: "Payout", path: "/admin/reports/payout-report" }, */
       { name: "Wallets", path: "/admin/reports/wallet-report" },
     ],
   },

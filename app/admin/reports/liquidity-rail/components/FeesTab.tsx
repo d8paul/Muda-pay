@@ -50,6 +50,17 @@ const FeesTab = ({ clientId }: FeesTabProps) => {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // Dynamic API URL selection based on hostname
+  const getApiBaseUrl = () => {
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname
+      return hostname === 'payments.muda.tech' 
+        ? 'https://api.muda.tech/v1/rail'
+        : 'https://rail.stage-mudax.xyz'
+    }
+    return 'https://rail.stage-mudax.xyz' // fallback to staging
+  }
+
   useEffect(() => {
     fetchCharges()
   }, [])
@@ -59,7 +70,8 @@ const FeesTab = ({ clientId }: FeesTabProps) => {
     try {
       // Direct implementation for staging testing
       const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-      const response = await fetch("https://rail.stage-mudax.xyz/admin/getCharges", {
+      const baseUrl = getApiBaseUrl()
+      const response = await fetch(`${baseUrl}/admin/getCharges`, {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -122,7 +134,8 @@ const FeesTab = ({ clientId }: FeesTabProps) => {
 
       // Direct implementation for staging testing
       const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-      const response = await fetch(`https://rail.stage-mudax.xyz/admin/updateLRCharges`, {
+      const baseUrl = getApiBaseUrl()
+      const response = await fetch(`${baseUrl}/admin/updateLRCharges`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
