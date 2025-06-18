@@ -83,10 +83,10 @@ export default function PendingCompanies({ onBusinessApproved }: PendingCompanie
     };
 
     const handleApproveCompany = async (businessId: string) => {
-        if (!hasPermission("business.approve")) {
-            toast.error("You do not have permission to approve companies.");
-            return;
-        }
+        // if (!hasPermission("business.approve")) {
+        //     toast.error("You do not have permission to approve companies.");
+        //     return;
+        // }
         
         // Show 2FA modal first
         setBusinessToApprove(businessId);
@@ -124,10 +124,10 @@ export default function PendingCompanies({ onBusinessApproved }: PendingCompanie
     const handleRejectCompany = async () => {
         if (!businessToReject) return;
         
-        if (!hasPermission("business.approve")) {
-            toast.error("You do not have permission to reject companies.");
-            return;
-        }
+        // if (!hasPermission("business.approve")) {
+        //     toast.error("You do not have permission to reject companies.");
+        //     return;
+        // }
         
         if (!rejectReason.trim()) {
             toast.error("Please provide a reason for rejection.");
@@ -288,7 +288,7 @@ export default function PendingCompanies({ onBusinessApproved }: PendingCompanie
                                     <TableCell>{business.data_content?.contact_person_name}</TableCell>
                                     <TableCell>{business.data_content?.address}</TableCell>
                                     <TableCell>
-                                        {hasPermission("business.approve") && (
+                                        {/* {hasPermission("business.approve") && ( */}
                                             <div className="flex gap-2">
                                                 <Button
                                                     variant="default"
@@ -307,7 +307,7 @@ export default function PendingCompanies({ onBusinessApproved }: PendingCompanie
                                                     {isRejecting === business.id ? "Rejecting..." : "Reject"}
                                                 </Button>
                                             </div>
-                                        )}
+                                        {/* )} */}
                                     </TableCell>
                                 </TableRow>
                             ))

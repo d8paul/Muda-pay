@@ -99,7 +99,7 @@ export default function PendingUsers() {
 
   // Memoize the fetch function
   const fetchPendingUsers = React.useCallback(async () => {
-    if (!hasPermission("users.approve")) return
+    // if (!hasPermission("users.approve")) return
 
     try {
       setIsLoading(true)
@@ -115,13 +115,13 @@ export default function PendingUsers() {
     }
   }, [])
 
-  useEffect(() => {
-    // Check if user has permission to view pending users
-    if (!hasPermission('users.approve')) {
-      router.push('/admin/dashboard')
-      return
-    }
-  }, [hasPermission, router])
+  // useEffect(() => {
+  //   // Check if user has permission to view pending users
+  //   if (!hasPermission('users.approve')) {
+  //     router.push('/admin/dashboard')
+  //     return
+  //   }
+  // }, [hasPermission, router])
 
   // Initial fetch and permission check
   useEffect(() => {
@@ -260,9 +260,9 @@ export default function PendingUsers() {
     )
   }
 
-  if (!hasPermission("users.approve")) {
-    return null
-  }
+  // if (!hasPermission("users.approve")) {
+  //   return null
+  // }
 
   return (
     <div className="py-6">
