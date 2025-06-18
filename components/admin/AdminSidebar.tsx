@@ -35,8 +35,7 @@ const menuItems = [
     icon: UsersIcon,
     submenu: [
       { name: "Business List", path: "/admin/business/businesslist" },
-      { name: "Add Business", path: "/admin/business/addbusiness" },
-      { name: "Fee Products", path: "/admin/fees/products" }
+      { name: "Add Business", path: "/admin/business/addbusiness" }
    
     ],
   },
@@ -70,6 +69,7 @@ const menuItems = [
     icon: DocumentCurrencyDollarIcon,
     submenu: [
       { name: "Liquidity rail fees", path: "/admin/reports/liquidity-rail?tab=fees" },
+      { name: "Fee Products", path: "/admin/fees/products" }
     ],
   }, 
   {
@@ -96,7 +96,6 @@ const menuItems = [
       { name: "Volume", path: "/admin/reports/volume" },
       { name: "Collections", path: "/admin/reports/collections-report" },
       { name: "Payout", path: "/admin/reports/payout-report" },
-      { name: "Charges", path: "/admin/reports/charges-report" },
       { name: "Wallets", path: "/admin/reports/wallet-report" },
     ],
   },
