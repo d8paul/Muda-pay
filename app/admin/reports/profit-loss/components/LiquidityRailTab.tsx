@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
-import { get } from "@/utils/api"
+import { liquidityRailApi } from "@/utils/liquidityRailApi"
 import ProgressBar from "@/components/ProgressBar"
 import toast from "react-hot-toast"
 import {
@@ -148,7 +148,7 @@ const LiquidityRailTab = () => {
       // Don't send currency filter to API - we'll handle filtering on frontend
       // This allows us to get all currencies and build the dropdown dynamically
 
-      const response = await get(`/admin/reports/profit/liquidityrailnetwork?${queryParams.toString()}`)
+      const response = await liquidityRailApi.getProfitReport(queryParams.toString())
       console.log("Liquidity Rail Response: ", response)
       console.log("Response data type:", typeof response.data)
       console.log("Response data:", response.data)

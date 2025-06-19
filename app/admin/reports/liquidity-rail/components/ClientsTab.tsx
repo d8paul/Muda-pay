@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
-import { get } from "@/utils/api"
+import { liquidityRailApi } from "@/utils/liquidityRailApi"
 import ProgressBar from "@/components/ProgressBar"
 import toast from "react-hot-toast"
 import { Badge } from "@/components/ui/badge"
@@ -78,7 +78,7 @@ const ClientsTab = ({ onClientSelect }: ClientsTabProps) => {
           email_verified: filters.emailVerified !== "all" ? filters.emailVerified : ""
         })
 
-        const response = await get(`/admin/reports/rails/clients?${queryParams.toString()}`)
+        const response = await liquidityRailApi.getClients(queryParams.toString())
         const data = response as ClientResponse
         setClients(data.data.items || [])
         setPagination(data.data.pagination)
