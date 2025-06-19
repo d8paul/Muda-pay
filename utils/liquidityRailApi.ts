@@ -157,6 +157,10 @@ export const liquidityRailApi = {
   getClients: (queryParams: string) => 
     lrGet(`/admin/reports/rails/clients?${queryParams}`),
   
+  // Get profit reports with query parameters
+  getProfitReport: (queryParams: string) => 
+    lrGet(`/admin/reports/rails/profits?${queryParams}`),
+  
   // Add more Liquidity Rail specific endpoints as needed
   // getFees: () => lrGet('/admin/fees'),
   // etc.
