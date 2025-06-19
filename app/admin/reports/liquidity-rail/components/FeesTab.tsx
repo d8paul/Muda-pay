@@ -14,6 +14,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { get, put } from "@/utils/api"
+import { liquidityRailApi } from "@/utils/liquidityRailApi"
 import ProgressBar from "@/components/ProgressBar"
 import toast from "react-hot-toast"
 import { Pencil } from "lucide-react"
@@ -50,17 +51,6 @@ const FeesTab = ({ clientId }: FeesTabProps) => {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Dynamic API URL selection based on hostname
-  const getApiBaseUrl = () => {
-    if (typeof window !== 'undefined') {
-      const hostname = window.location.hostname
-      return hostname === 'payments.muda.tech' 
-        ? 'https://api.muda.tech/v1/rail'
-        : 'https://rail.stage-mudax.xyz'
-    }
-    return 'https://rail.stage-mudax.xyz' // fallback to staging
-  }
-
   useEffect(() => {
     fetchCharges()
   }, [])
@@ -68,35 +58,14 @@ const FeesTab = ({ clientId }: FeesTabProps) => {
   const fetchCharges = async () => {
     setIsLoading(true)
     try {
-      // Direct implementation for staging testing
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-      const baseUrl = getApiBaseUrl()
-      const response = await fetch(`${baseUrl}/admin/getCharges`, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        }
-      })
-      const data = await response.json()
-      console.log("Charges response:", data)
-      
-      if (response.ok && data.status === 200 && data.data) {
-        setCharges(Array.isArray(data.data) ? data.data : [])
-      } else {
-        throw new Error(data.message || 'Failed to fetch charges')
-      }
-
-      /* TODO: Future implementation with API utility
-      const response = await get("/admin/liqudityrail/charges")
+      const response = await liquidityRailApi.getCharges()
       console.log("Charges response:", response)
       
-      if (response.status === 200 && response.data && response.data.items) {
-        setCharges(Array.isArray(response.data.items) ? response.data.items : [])
+      if (response.status === 200 && response.data) {
+        setCharges(Array.isArray(response.data) ? response.data : [])
       } else {
-        throw new Error(response.data?.message || 'Failed to fetch charges')
+        throw new Error(response.message || 'Failed to fetch charges')
       }
-      */
     } catch (error) {
       console.error("Error fetching charges:", error)
       toast.error("Failed to fetch charges data")
@@ -132,42 +101,15 @@ const FeesTab = ({ clientId }: FeesTabProps) => {
         gas_fee: editFormData.gas_fee
       }
 
-      // Direct implementation for staging testing
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-      const baseUrl = getApiBaseUrl()
-      const response = await fetch(`${baseUrl}/admin/updateLRCharges`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          id: selectedCharge.id,
-          ...updateData
-        })
-      })
-      const data = await response.json()
-      
-      if (response.ok && data.status === 200) {
-        toast.success("Charge updated successfully")
-        setIsEditDialogOpen(false)
-        fetchCharges() // Refresh the data
-      } else {
-        throw new Error(data.message || 'Failed to update charge')
-      }
-
-      /* TODO: Future implementation with API utility
-      const response = await put(`/admin/liqudityrail/charges/${selectedCharge.id}`, updateData)
+      const response = await liquidityRailApi.updateCharges(selectedCharge.id, updateData)
       
       if (response.status === 200) {
         toast.success("Charge updated successfully")
         setIsEditDialogOpen(false)
         fetchCharges() // Refresh the data
       } else {
-        throw new Error(response.data?.message || 'Failed to update charge')
+        throw new Error(response.message || 'Failed to update charge')
       }
-      */
     } catch (error: any) {
       console.error("Error updating charge:", error)
       const errorMessage = error?.response?.data?.message || error?.message || "Failed to update charge"
