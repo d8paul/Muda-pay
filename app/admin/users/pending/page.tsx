@@ -99,7 +99,7 @@ export default function PendingUsers() {
 
   // Memoize the fetch function
   const fetchPendingUsers = React.useCallback(async () => {
-    if (!hasPermission("users.approve")) return
+    // if (!hasPermission("users.approve")) return
 
     try {
       setIsLoading(true)
@@ -115,13 +115,13 @@ export default function PendingUsers() {
     }
   }, [])
 
-  useEffect(() => {
-    // Check if user has permission to view pending users
-    if (!hasPermission('users.approve')) {
-      router.push('/admin/dashboard')
-      return
-    }
-  }, [hasPermission, router])
+  // useEffect(() => {
+  //   // Check if user has permission to view pending users
+  //   if (!hasPermission('users.approve')) {
+  //     router.push('/admin/dashboard')
+  //     return
+  //   }
+  // }, [hasPermission, router])
 
   // Initial fetch and permission check
   useEffect(() => {
@@ -161,7 +161,7 @@ export default function PendingUsers() {
 
       const response = await put(`/admin/users/${selectedUser.id}/add/reject`, payload)
 
-      if (response.status === 201) {
+      if (response.status === 201 || response.status === 200) {
         toast.success(response.message || "User rejected successfully")
         fetchPendingUsers()
         setShowRejectDialog(false)
@@ -190,7 +190,7 @@ export default function PendingUsers() {
 
       const response = await put(`/admin/users/${selectedUser.id}/add/${action}`, payload)
 
-      if (response.status === 201) {
+      if (response.status === 201 || response.status === 200) {
         toast.success(response.message || "User added successfully")
         fetchPendingUsers()
       } else {
@@ -260,9 +260,9 @@ export default function PendingUsers() {
     )
   }
 
-  if (!hasPermission("users.approve")) {
-    return null
-  }
+  // if (!hasPermission("users.approve")) {
+  //   return null
+  // }
 
   return (
     <div className="py-6">

@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
-import { get } from "@/utils/api"
+import { liquidityRailApi } from "@/utils/liquidityRailApi"
 import ProgressBar from "@/components/ProgressBar"
 import toast from "react-hot-toast"
 import { Button } from "@/components/ui/button"
@@ -140,7 +140,7 @@ const TransactionsTab = () => {
         ...(filters.dateRange && { start_date: filters.dateRange.from?.toISOString(), end_date: filters.dateRange.to?.toISOString() })
       })
 
-      const response = await get(`/admin/reports/rails/transactions?${queryParams.toString()}`)
+      const response = await liquidityRailApi.getTransactions(queryParams.toString())
       console.log("Response: ", response.data)
       const data = response.data as TransactionResponse
       

@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import toast from "react-hot-toast"
 import ProgressBar from "@/components/ProgressBar"
-import { post, get } from "@/utils/api"
+import { post, get, isValidationError, getValidationErrors } from "@/utils/api"
 import { useTwoFactorAuth } from "@/hooks/useTwoFactorAuth"
 import TwoFactorAuthDialog from "@/components/TwoFactorAuthDialog"
 
@@ -36,6 +36,7 @@ export default function AddUserPage() {
     email: "",
     role: "",
   })
+  const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({})
   const [twoFactorStatus, setTwoFactorStatus] = useState<string | null>(null)
   
   const { 
@@ -95,13 +96,19 @@ export default function AddUserPage() {
         setTotalItems(response.total || response.data.length)
       } else {
         console.error("Invalid response format:", response)
-        toast.error("Invalid response format from server")
+        toast.error(response.message || "Invalid response format from server")
         setRoles([])
         setFilteredRoles([])
       }
     } catch (error) {
       console.error("Error fetching roles:", error)
-      toast.error("Failed to fetch roles")
+      toast.error(
+        typeof error === "string"
+          ? error
+          : error instanceof Error && error.message
+          ? error.message
+          : "Failed to fetch roles"
+      )
       setRoles([])
       setFilteredRoles([])
     } finally {
@@ -139,13 +146,21 @@ export default function AddUserPage() {
   
   const addUser = async (data: any, token?: string) => {
     setLocalLoading(true)
+    setValidationErrors({}) // Clear previous validation errors
+    
     try {
       // If token is provided, include it in the request
       const payload = token ? { ...data, token } : data
       await post("admin/users", payload)
+      // Success is handled by the 2FA hook onSuccess callback
     } catch (error) {
-      toast.error("Failed to add user. Please try again.")
-      throw error
+      // Check if it's a validation error and handle field-specific errors
+      if (isValidationError(error)) {
+        const fieldErrors = getValidationErrors(error)
+        setValidationErrors(fieldErrors)
+      }
+      // General error toast is automatically shown by the API interceptor
+      throw error // Re-throw to let 2FA hook handle it
     } finally {
       setLocalLoading(false)
     }
@@ -175,8 +190,14 @@ export default function AddUserPage() {
                 value={formData.firstName}
                 onChange={handleChange}
                 placeholder="Enter first name"
+                className={validationErrors.first_name ? 'border-red-500' : ''}
                 required
               />
+              {validationErrors.first_name && (
+                <p className="text-red-500 text-sm mt-1">
+                  {validationErrors.first_name.join(', ')}
+                </p>
+              )}
             </div>
             <div>
               <Label htmlFor="lastName">Last Name</Label>
@@ -187,8 +208,14 @@ export default function AddUserPage() {
                 value={formData.lastName}
                 onChange={handleChange}
                 placeholder="Enter last name"
+                className={validationErrors.last_name ? 'border-red-500' : ''}
                 required
               />
+              {validationErrors.last_name && (
+                <p className="text-red-500 text-sm mt-1">
+                  {validationErrors.last_name.join(', ')}
+                </p>
+              )}
             </div>
             <div>
               <Label htmlFor="email">Email</Label>
@@ -199,8 +226,14 @@ export default function AddUserPage() {
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="Enter email address"
+                className={validationErrors.email ? 'border-red-500' : ''}
                 required
               />
+              {validationErrors.email && (
+                <p className="text-red-500 text-sm mt-1">
+                  {validationErrors.email.join(', ')}
+                </p>
+              )}
             </div>
             <div>
               <Label htmlFor="role">Role</Label>
@@ -216,6 +249,11 @@ export default function AddUserPage() {
                   ))}
                 </SelectContent>
               </Select>
+              {validationErrors.user_role && (
+                <p className="text-red-500 text-sm mt-1">
+                  {validationErrors.user_role.join(', ')}
+                </p>
+              )}
             </div>
             <div>
               <Button type="submit" disabled={isLoading}>

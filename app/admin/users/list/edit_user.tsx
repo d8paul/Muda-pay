@@ -17,6 +17,7 @@ interface EditUserPageProps {
 
 export default function EditUserPage({ userId, onSuccess }: EditUserPageProps) {
   const [isLoading, setIsLoading] = useState(false)
+  const [roles, setRoles] = useState<any[]>([])
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -48,7 +49,23 @@ export default function EditUserPage({ userId, onSuccess }: EditUserPageProps) {
       }
     }
 
+    const fetchRoles = async () => {
+      try {
+        const response = await get("/admin/roles")
+        if (response.data && Array.isArray(response.data)) {
+          setRoles(response.data)
+        } else if (response.data?.items && Array.isArray(response.data.items)) {
+          setRoles(response.data.items)
+        }
+      } catch (error) {
+        console.error("Failed to fetch roles:", error)
+        toast.error("Failed to fetch roles")
+        setRoles([])
+      }
+    }
+
     fetchUserData()
+    fetchRoles()
   }, [userId])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -89,7 +106,6 @@ export default function EditUserPage({ userId, onSuccess }: EditUserPageProps) {
       await put(`/admin/users/${userId}`, {
         first_name: formData.firstName,
         last_name: formData.lastName,
-        email: formData.email,
         user_role: formData.user_role,
         status: formData.status,
         reset_password: formData.reset_password
@@ -157,10 +173,11 @@ export default function EditUserPage({ userId, onSuccess }: EditUserPageProps) {
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="approver">Approver</SelectItem>
-                  <SelectItem value="verifier">Verifier</SelectItem>
-                  <SelectItem value="user">User</SelectItem>
+                  {roles.map((role) => (
+                    <SelectItem key={role.id} value={role.id}>
+                      {role.name || role.role_name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

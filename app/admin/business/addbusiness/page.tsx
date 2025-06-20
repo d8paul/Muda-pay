@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -13,6 +14,7 @@ import TwoFactorAuthDialog from "@/components/TwoFactorAuthDialog"
 import { PhoneInput } from "@/components/ui/phone-input"
 
 export default function AddBusinessPage() {
+  const router = useRouter()
   const [localLoading, setLocalLoading] = useState(false)
   const [formData, setFormData] = useState({
     business_name: "",
@@ -31,17 +33,6 @@ export default function AddBusinessPage() {
     requireTwoFactorAuth,
     handle2FASubmit 
   } = useTwoFactorAuth({
-    onSuccess: () => {
-      toast.success("Business added successfully")
-      setFormData({
-        business_name: "",
-        phone_number: "",
-        address: "",
-        contact_person_name: "",
-        contact_email: "",
-        contact_phone: ""
-      })
-    },
     redirectOnMissing: true
   })
   
@@ -84,7 +75,7 @@ export default function AddBusinessPage() {
     try {
       const payload = token ? { ...data, token } : data
       const response = await post("/admin/create-business", payload)
-      if (response.status === 201) {
+      if (response.status === 201 || response.status === 200) {
         toast.success("Business added successfully")
         setFormData({
           business_name: "",
@@ -94,6 +85,8 @@ export default function AddBusinessPage() {
           contact_email: "",
           contact_phone: ""
         })
+        // Redirect to pending businesses page
+        router.push("/admin/business/businesslist?tab=pending")
       } else {
         throw new Error("Failed to add business")
       }

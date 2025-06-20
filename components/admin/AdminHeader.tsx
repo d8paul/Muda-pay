@@ -51,7 +51,9 @@ export default function AdminHeader() {
                         <p className="text-sm font-medium text-gray-700">
                           {user.first_name} {user.last_name}
                         </p>
-                        <p className="text-xs text-gray-500 capitalize">{user.role}</p>
+                        <p className="text-xs text-gray-500 capitalize">
+                          {user.role_details?.name || user.role}
+                        </p>
                       </div>
                     )}
                   </div>

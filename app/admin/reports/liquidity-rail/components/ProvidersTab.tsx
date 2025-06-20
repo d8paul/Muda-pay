@@ -4,22 +4,16 @@ import { useState, useEffect } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { get } from "@/utils/api"
+import { liquidityRailApi } from "@/utils/liquidityRailApi"
 import ProgressBar from "@/components/ProgressBar"
 import toast from "react-hot-toast"
 
 interface Provider {
-  provider_service_id: number
-  service_id: number
   provider_id: number
-  min_amount: number
-  max_amount: number
-  auto_id: number
-  service_code: string
-  service_name: string
-  country: string
-  currency: string
-  provider_type: string
+  name: string
+  created_at: string
+  approval_status: string
+  rates_endpoint: string | null
 }
 
 interface ProviderResponse {
@@ -37,9 +31,7 @@ interface ProviderResponse {
 const ProvidersTab = () => {
   const [providers, setProviders] = useState<Provider[]>([])
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedCountry, setSelectedCountry] = useState<string>("all")
-  const [selectedCurrency, setSelectedCurrency] = useState<string>("all")
-  const [selectedType, setSelectedType] = useState<string>("all")
+  const [selectedStatus, setSelectedStatus] = useState<string>("all")
   const [isLoading, setIsLoading] = useState(false)
   const [pagination, setPagination] = useState<ProviderResponse['pagination']>({
     current_page: 1,
@@ -53,7 +45,7 @@ const ProvidersTab = () => {
   const fetchProviders = async (page: number = 1) => {
     setIsLoading(true)
     try {
-      const response = await get(`/admin/reports/rails/providers?page=${page}`)
+      const response = await liquidityRailApi.getProviders(page)
       const data = response.data as ProviderResponse
       setProviders(data.items || [])
       setPagination(data.pagination)
@@ -76,70 +68,52 @@ const ProvidersTab = () => {
 
   const filteredProviders = providers.filter((provider) => {
     const matchesSearch = 
-      provider.service_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      provider.service_code.toLowerCase().includes(searchTerm.toLowerCase())
+      provider.name.toLowerCase().includes(searchTerm.toLowerCase())
     
-    const matchesCountry = selectedCountry === "all" ? true : provider.country === selectedCountry
-    const matchesCurrency = selectedCurrency === "all" ? true : provider.currency === selectedCurrency
-    const matchesType = selectedType === "all" ? true : provider.provider_type === selectedType
+    const matchesStatus = selectedStatus === "all" ? true : provider.approval_status === selectedStatus
 
-    return matchesSearch && matchesCountry && matchesCurrency && matchesType
+    return matchesSearch && matchesStatus
   })
 
-  const uniqueCountries = [...new Set(providers.map(p => p.country))]
-  const uniqueCurrencies = [...new Set(providers.map(p => p.currency))]
-  const uniqueTypes = [...new Set(providers.map(p => p.provider_type))]
+  const uniqueStatuses = [...new Set(providers.map(p => p.approval_status))]
 
-  const formatAmount = (amount: number) => {
-    return new Intl.NumberFormat('en-US').format(amount)
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString()
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "active":
+        return "bg-green-100 text-green-800"
+      case "inactive":
+        return "bg-red-100 text-red-800"
+      case "pending":
+        return "bg-yellow-100 text-yellow-800"
+      default:
+        return "bg-gray-100 text-gray-800"
+    }
   }
 
   return (
     <>
       <ProgressBar isLoading={isLoading} />
       <div className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input
             type="text"
-            placeholder="Search by service name or code..."
+            placeholder="Search by provider name..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <Select value={selectedCountry} onValueChange={setSelectedCountry}>
+          <Select value={selectedStatus} onValueChange={setSelectedStatus}>
             <SelectTrigger>
-              <SelectValue placeholder="Select Country" />
+              <SelectValue placeholder="Select Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Countries</SelectItem>
-              {uniqueCountries.map((country) => (
-                <SelectItem key={country} value={country}>
-                  {country}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select Currency" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Currencies</SelectItem>
-              {uniqueCurrencies.map((currency) => (
-                <SelectItem key={currency} value={currency}>
-                  {currency}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={selectedType} onValueChange={setSelectedType}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select Type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              {uniqueTypes.map((type) => (
-                <SelectItem key={type} value={type}>
-                  {type.toUpperCase()}
+              <SelectItem value="all">All Statuses</SelectItem>
+              {uniqueStatuses.map((status) => (
+                <SelectItem key={status} value={status}>
+                  {status.toUpperCase()}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -149,36 +123,42 @@ const ProvidersTab = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Service Name</TableHead>
-              <TableHead>Service Code</TableHead>
-              <TableHead>Country</TableHead>
-              <TableHead>Currency</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Min Amount</TableHead>
-              <TableHead>Max Amount</TableHead>
+              <TableHead>Provider ID</TableHead>
+              <TableHead>Provider Name</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Created Date</TableHead>
+              <TableHead>Rates Endpoint</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredProviders.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={5} className="text-center py-8 text-gray-500">
                   No providers found
                 </TableCell>
               </TableRow>
             ) : (
               filteredProviders.map((provider) => (
-                <TableRow key={provider.provider_service_id}>
-                  <TableCell>{provider.service_name}</TableCell>
-                  <TableCell>{provider.service_code}</TableCell>
-                  <TableCell>{provider.country}</TableCell>
-                  <TableCell>{provider.currency}</TableCell>
+                <TableRow key={provider.provider_id}>
+                  <TableCell>{provider.provider_id}</TableCell>
+                  <TableCell>{provider.name}</TableCell>
                   <TableCell>
-                    <span className={`px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800`}>
-                      {provider.provider_type.toUpperCase()}
+                    <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(provider.approval_status)}`}>
+                      {provider.approval_status.toUpperCase()}
                     </span>
                   </TableCell>
-                  <TableCell>{formatAmount(provider.min_amount)}</TableCell>
-                  <TableCell>{formatAmount(provider.max_amount)}</TableCell>
+                  <TableCell>{formatDate(provider.created_at)}</TableCell>
+                  <TableCell>
+                    {provider.rates_endpoint ? (
+                      <span className="text-sm text-blue-600 truncate" title={provider.rates_endpoint}>
+                        {provider.rates_endpoint.length > 30 
+                          ? `${provider.rates_endpoint.substring(0, 30)}...` 
+                          : provider.rates_endpoint}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">No endpoint</span>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))
             )}

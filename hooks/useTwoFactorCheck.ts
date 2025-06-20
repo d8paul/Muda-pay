@@ -1,21 +1,27 @@
 import { useRouter } from "next/navigation"
-import { useUser } from "@/contexts/UserContext"
+import { get } from "@/utils/api"
 import toast from "react-hot-toast"
 
 export const useTwoFactorCheck = () => {
   const router = useRouter()
-  const { checkTwoFactorStatus } = useUser()
 
   const checkAndRedirect = async () => {
-    const isTwoFactorEnabled = await checkTwoFactorStatus()
-    
-    if (!isTwoFactorEnabled) {
-      toast.error("Please enable Two-Factor Authentication before proceeding")
-      router.push("/admin/settings")
-      return false
+    try {
+      const response = await get("/admin/users/2fa/status")
+      
+      // Check if 2FA is enabled
+      if (response?.status !== "active" && response?.data?.status !== "active") {
+        toast.error("Please enable Two-Factor Authentication before proceeding")
+        router.push("/admin/settings")
+        return false
+      }
+      
+      return true
+    } catch (error) {
+      console.error("Error checking 2FA status:", error)
+      // Don't redirect on error, just log it
+      return true
     }
-    
-    return true
   }
 
   return { checkAndRedirect }
