@@ -4,7 +4,20 @@ import { useState } from "react";
 import WithdrawPanel from "@/components/WithdrawPanel";
 import LiqPay from "@/components/LiqPay";
 import DepositComponent from "./DepositComponent";
-export default function StableCoinsPage() {
+
+interface Balance {
+  balance: string;
+  currency: string;
+  asset_issuer: string;
+  id: string;
+  asset_code: string;
+}
+
+interface StableCoinsPageProps {
+  balances: Balance[];
+}
+
+export default function StableCoinsPage({ balances }: StableCoinsPageProps) {
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
   const [isLiqPayOpen, setIsLiqPayOpen] = useState(false);
   const [isDepositOpen, setIsDepositOpen] = useState(false);
@@ -44,10 +57,12 @@ export default function StableCoinsPage() {
 
       {/* Withdraw Panel */}
       <WithdrawPanel 
+        balances={balances}
         isOpen={isWithdrawOpen}
         onClose={() => setIsWithdrawOpen(false)}
       />
       <LiqPay
+        balances={balances}
         isOpen={isLiqPayOpen}
         onClose={() => setIsLiqPayOpen(false)}
       />

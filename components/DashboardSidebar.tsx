@@ -29,17 +29,12 @@ const menuItems = [
     subItems: [
       { name: "Wallets", icon: AccountBalanceWallet, path: "/dashboard/offramps/liquidity" },
       { name: "Transactions", icon: ClipboardDocumentListIcon, path: "/dashboard/offramps/transactions" },
-      { name: "Addresses", icon: CurrencyDollarIcon, path: "/dashboard/offramps/addresses" },
-    ]
-  },
-  { 
-    name: "Settings", 
-    icon: Cog6ToothIcon, 
-    path: "/dashboard/settings",
-    subItems: [
       { name: "Payment Methods", icon: Payment, path: "/dashboard/settings/payment-methods" },
+
     ]
   },
+  { name: "Settings", icon: Cog6ToothIcon, path: "/dashboard/settings" },
+
   { name: "Developer Docs", icon: CodeBracketIcon, path: "https://payments-doc.muda.tech/", external: true },
 ];
 

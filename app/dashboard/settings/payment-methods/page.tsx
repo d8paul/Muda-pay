@@ -25,8 +25,22 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { post, get } from "@/utils/api";
 import { toast } from "react-hot-toast";
+import { Trash2, Eye, Plus, Loader2 } from "lucide-react";
+import { lrGet, lrPost } from "@/utils/liquidityRailApi";
+import AddPaymentMethod from "./AddPaymentMethod";
 
 interface PaymentMethod {
   id: number;
@@ -55,7 +69,12 @@ export default function PaymentMethodsPage() {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddingMethod, setIsAddingMethod] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [methodType, setMethodType] = useState<"mobile_money" | "bank">("mobile_money");
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
 
   // Form states
   const [formData, setFormData] = useState<Partial<PaymentMethod>>({
@@ -73,216 +92,85 @@ export default function PaymentMethodsPage() {
 
   const fetchPaymentMethods = async () => {
     try {
+      setLoading(true);
       console.log('Fetching payment methods...');
-      const response = await get("rail/accounts/getPaymentMethods");
+      
+      // Updated to match the JS file API endpoint
+      const response = await lrGet("/accounts/getPaymentMethods");
       console.log('Payment methods response:', response);
       
-      if (response.status === 200) {
-        if (Array.isArray(response.data)) {
-          console.log('Payment methods data:', response.data);
-          setPaymentMethods(response.data);
-        } else if (Array.isArray(response)) {
-          console.log('Payment methods data (direct):', response);
-          setPaymentMethods(response);
-        } else {
-          console.error('Invalid response format. Expected array:', response);
-          toast.error("Invalid response format from server");
-        }
+      if (response && Array.isArray(response)) {
+        console.log('Payment methods data:', response);
+        setPaymentMethods(response);
       } else {
-        console.error('Error response:', response);
-        toast.error(response.message || "Failed to fetch payment methods");
+        console.error('Invalid response format. Expected array:', response);
+        toast.error("Invalid response format from server");
+        setPaymentMethods([]);
       }
     } catch (error) {
       console.error("Error fetching payment methods:", error);
       toast.error("Failed to fetch payment methods: " + (error instanceof Error ? error.message : "Unknown error"));
+      setPaymentMethods([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAddPaymentMethod = async () => {
+
+
+  const handleDeletePaymentMethod = async () => {
+    if (!selectedMethod) return;
+    
     try {
-      const response = await post("rail/accounts/addPaymentMethod", formData);
-      console.log('Add payment method response:', response);
+      setIsDeleting(true);
       
-      if (response.status === 200) {
-        toast.success("Payment method added successfully");
-        setIsAddingMethod(false);
+      // Updated to match the JS file API endpoint
+      const response = await lrGet(`accounts/deletePhoneNumber/${selectedMethod.payment_method_id}`);
+      
+      if (response && (response.status === 200 || response.status === 201)) {
+        toast.success(response.message || "Payment method deleted successfully");
+        setShowDeleteDialog(false);
+        setSelectedMethod(null);
         fetchPaymentMethods();
-        setFormData({
-          type: "mobile_money",
-          currency: "",
-          country_code: "",
-          account_name: "",
-          phone_number: "",
-          network: "",
-        });
       } else {
-        toast.error(response.message || "Failed to add payment method");
+        toast.error(response?.message || "Failed to delete payment method");
       }
     } catch (error) {
-      console.error("Error adding payment method:", error);
-      toast.error("Failed to add payment method: " + (error instanceof Error ? error.message : "Unknown error"));
+      console.error("Error deleting payment method:", error);
+      toast.error("Failed to delete payment method: " + (error instanceof Error ? error.message : "Unknown error"));
+    } finally {
+      setIsDeleting(false);
     }
   };
 
-  const renderForm = () => {
-    if (methodType === "mobile_money") {
-      return (
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium">Currency</label>
-              <Input
-                value={formData.currency || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, currency: e.target.value })
-                }
-                placeholder="e.g. UGX"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Country Code</label>
-              <Input
-                value={formData.country_code || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, country_code: e.target.value })
-                }
-                placeholder="e.g. UG"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="text-sm font-medium">Phone Number</label>
-            <Input
-              value={formData.phone_number || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, phone_number: e.target.value })
-              }
-              placeholder="+256700000000"
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium">Network</label>
-            <Select
-              value={formData.network || ""}
-              onValueChange={(value) =>
-                setFormData({ ...formData, network: value })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select network" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="MTN">MTN</SelectItem>
-                <SelectItem value="AIRTEL">Airtel</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <label className="text-sm font-medium">Account Name</label>
-            <Input
-              value={formData.account_name || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, account_name: e.target.value })
-              }
-              placeholder="Full Name"
-            />
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="text-sm font-medium">Currency</label>
-            <Input
-              value={formData.currency || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, currency: e.target.value })
-              }
-              placeholder="e.g. GHS"
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium">Country Code</label>
-            <Input
-              value={formData.country_code || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, country_code: e.target.value })
-              }
-              placeholder="e.g. GH"
-            />
-          </div>
-        </div>
-        <div>
-          <label className="text-sm font-medium">Bank Name</label>
-          <Input
-            value={formData.bank_name || ""}
-            onChange={(e) =>
-              setFormData({ ...formData, bank_name: e.target.value })
-            }
-            placeholder="Bank Name"
-          />
-        </div>
-        <div>
-          <label className="text-sm font-medium">Account Number</label>
-          <Input
-            value={formData.account_number || ""}
-            onChange={(e) =>
-              setFormData({ ...formData, account_number: e.target.value })
-            }
-            placeholder="Account Number"
-          />
-        </div>
-        <div>
-          <label className="text-sm font-medium">Account Name</label>
-          <Input
-            value={formData.account_name || ""}
-            onChange={(e) =>
-              setFormData({ ...formData, account_name: e.target.value })
-            }
-            placeholder="Account Name"
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="text-sm font-medium">Bank Code</label>
-            <Input
-              value={formData.bank_code || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, bank_code: e.target.value })
-              }
-              placeholder="Bank Code"
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium">Sort Code</label>
-            <Input
-              value={formData.sort_code || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, sort_code: e.target.value })
-              }
-              placeholder="Sort Code"
-            />
-          </div>
-        </div>
-        <div>
-          <label className="text-sm font-medium">Swift Code</label>
-          <Input
-            value={formData.swift_code || ""}
-            onChange={(e) =>
-              setFormData({ ...formData, swift_code: e.target.value })
-            }
-            placeholder="Swift Code"
-          />
-        </div>
-      </div>
-    );
+  const resetForm = () => {
+    setFormData({
+      type: "mobile_money",
+      currency: "",
+      country_code: "",
+      account_name: "",
+      phone_number: "",
+      network: "",
+    });
+    setMethodType("mobile_money");
   };
 
+  const openDeleteDialog = (method: PaymentMethod) => {
+    setSelectedMethod(method);
+    setShowDeleteDialog(true);
+  };
+
+  const openDetailsDialog = (method: PaymentMethod) => {
+    setSelectedMethod(method);
+    setShowDetailsDialog(true);
+  };
+
+  const getTypeLabel = (type: string) => {
+    if (!type) return '';
+    return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  };
+
+ 
   return (
     <div className="p-6 max-w-[1200px]">
       <div className="flex justify-between items-center mb-6">
@@ -291,115 +179,212 @@ export default function PaymentMethodsPage() {
             Payment Methods
           </h1>
           <p className="text-sm text-muted-foreground">
-            Manage your payment methods for withdrawals
+            Manage your payment methods for receiving funds
           </p>
         </div>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button>Add Payment Method</Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Add Payment Method</DialogTitle>
-              <DialogDescription>
-                Add a new payment method for withdrawals
-              </DialogDescription>
-            </DialogHeader>
-            <div className="py-4">
-              <Select
-                value={methodType}
-                onValueChange={(value: "mobile_money" | "bank") => {
-                  setMethodType(value);
-                  setFormData({
-                    type: value,
-                    currency: "",
-                    country_code: "",
-                    account_name: "",
-                    ...(value === "mobile_money"
-                      ? { phone_number: "", network: "" }
-                      : {}),
-                  });
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select payment method type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="mobile_money">Mobile Money</SelectItem>
-                  <SelectItem value="bank">Bank Account</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <div className="mt-4">{renderForm()}</div>
-
-              <div className="mt-6 flex justify-end">
-                <Button onClick={handleAddPaymentMethod}>Add Method</Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={() => setShowAddDialog(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Payment Method
+        </Button>
       </div>
 
+      {/* Payment Methods List */}
       <div className="grid gap-6">
         {loading ? (
-          <div>Loading payment methods...</div>
+          <div className="flex items-center justify-center p-8">
+            <Loader2 className="h-6 w-6 animate-spin mr-2" />
+            Loading payment methods...
+          </div>
+        ) : paymentMethods.length === 0 ? (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <p className="text-muted-foreground">
+                You don't have any payment methods yet. Click "Add Payment Method" to create one.
+              </p>
+            </CardContent>
+          </Card>
         ) : (
           paymentMethods.map((method) => (
             <Card key={method.payment_method_id}>
-              <CardHeader>
-                <CardTitle>
-                  {method.type === "mobile_money"
-                    ? "Mobile Money"
-                    : "Bank Account"}
-                </CardTitle>
-                <CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="flex items-center space-x-2">
+                  <CardTitle className="text-base">
+                    {getTypeLabel(method.type)}
+                  </CardTitle>
+                  <Badge variant={method.type === "bank" ? "default" : "secondary"}>
+                    {method.currency}
+                  </Badge>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openDetailsDialog(method)}
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openDeleteDialog(method)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <CardDescription className="mb-2">
                   {method.type === "mobile_money"
                     ? `${method.network} - ${method.phone_number}`
                     : `${method.bank_name}`}
                 </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-sm font-medium">Currency</p>
-                    <p className="text-sm text-muted-foreground">
-                      {method.currency}
-                    </p>
+                    <p className="font-medium">Account Name</p>
+                    <p className="text-muted-foreground">{method.account_name}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium">Country</p>
-                    <p className="text-sm text-muted-foreground">
-                      {method.country_code}
-                    </p>
+                    <p className="font-medium">Country</p>
+                    <p className="text-muted-foreground">{method.country_code}</p>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium">Account Name</p>
-                    <p className="text-sm text-muted-foreground">
-                      {method.account_name}
-                    </p>
-                  </div>
-                  {method.type === "bank" && (
-                    <>
-                      <div>
-                        <p className="text-sm font-medium">Bank Name</p>
-                        <p className="text-sm text-muted-foreground">
-                          {method.bank_name}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">Account Number</p>
-                        <p className="text-sm text-muted-foreground">
-                          {method.account_number}
-                        </p>
-                      </div>
-                    </>
-                  )}
                 </div>
               </CardContent>
             </Card>
           ))
         )}
       </div>
+
+   <AddPaymentMethod showAddDialog={showAddDialog} setShowAddDialog={setShowAddDialog} />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this payment method? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {selectedMethod && (
+            <div className="my-4 p-4 bg-destructive/10 rounded-lg">
+              <div className="space-y-2 text-sm">
+                <div>
+                  <span className="font-medium">Type:</span> {getTypeLabel(selectedMethod.type)}
+                </div>
+                <div>
+                  <span className="font-medium">Name:</span> {selectedMethod.account_name}
+                </div>
+                <div>
+                  <span className="font-medium">
+                    {selectedMethod.type === 'bank' ? 'Account Number:' : 'Phone Number:'}
+                  </span>{' '}
+                  {selectedMethod.type === 'bank' ? selectedMethod.account_number : selectedMethod.phone_number}
+                </div>
+              </div>
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setSelectedMethod(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeletePaymentMethod}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* View Details Dialog */}
+      <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Payment Method Details</DialogTitle>
+          </DialogHeader>
+          {selectedMethod && (
+            <div className="py-4">
+              <div className="mb-4 p-4 bg-muted rounded-lg">
+                <h3 className="font-semibold text-lg">
+                  {getTypeLabel(selectedMethod.type)}
+                </h3>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Currency</p>
+                  <p className="font-medium">{selectedMethod.currency}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Account Name</p>
+                  <p className="font-medium">{selectedMethod.account_name}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {selectedMethod.type === 'bank' ? 'Account Number' : 'Phone Number'}
+                  </p>
+                  <p className="font-medium font-mono">
+                    {selectedMethod.type === 'bank' ? selectedMethod.account_number : selectedMethod.phone_number}
+                  </p>
+                </div>
+                {selectedMethod.type !== 'bank' && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Network</p>
+                    <p className="font-medium">{selectedMethod.network}</p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Country Code</p>
+                  <p className="font-medium">{selectedMethod.country_code}</p>
+                </div>
+                
+                {selectedMethod.type === 'bank' && (
+                  <>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Bank Name</p>
+                      <p className="font-medium">{selectedMethod.bank_name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Bank Code</p>
+                      <p className="font-medium">{selectedMethod.bank_code}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-sm font-medium text-muted-foreground">Bank Address</p>
+                      <p className="font-medium">{selectedMethod.bank_address}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Bank Country</p>
+                      <p className="font-medium">{selectedMethod.bank_country}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Bank Phone Number</p>
+                      <p className="font-medium">{selectedMethod.bank_phone_number}</p>
+                    </div>
+                  </>
+                )}
+              </div>
+              
+              <div className="mt-6 flex justify-end">
+                <Button onClick={() => {
+                  setShowDetailsDialog(false);
+                  setSelectedMethod(null);
+                }}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 

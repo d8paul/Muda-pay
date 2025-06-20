@@ -23,14 +23,14 @@ import { get, post } from '@/utils/api';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
+import { lrGet, lrPost } from '@/utils/liquidityRailApi';
 
 interface Balance {
   balance: string;
   currency: string;
-  issuer: string;
+  asset_issuer: string;
   id: string;
   asset_code: string;
-  network: string;
 }
 
 interface PaymentMethod {
@@ -86,9 +86,9 @@ export default function LiquidityPage() {
       try {
         const [balancesResponse, methodsResponse] = await Promise.all([
           get('clients/balances'),
-          get('web/rail/accounts/getPaymentMethods')
+          lrGet('/accounts/getPaymentMethods')
         ]);
-
+console.log("balancesResponse",balancesResponse)
         if (balancesResponse.status === 200) {
           setBalances(balancesResponse.data);
         }
@@ -109,7 +109,7 @@ export default function LiquidityPage() {
     const fetchProviders = async () => {
       if (selectedAsset) {
         try {
-          const response = await post('rail/accounts/provider', {
+          const response = await lrPost('/accounts/provider', {
             asset: selectedAsset,
             currency: paymentMethods[0]?.currency || 'UGX'
           });
@@ -146,14 +146,7 @@ export default function LiquidityPage() {
             Manage your liquidity across different networks
           </p>
           <div className="flex gap-4">
-            <Button
-              variant="outline"
-              onClick={() => router.push('/dashboard/settings/payment-methods')}
-            >
-              <Payment className="h-4 w-4 mr-2" />
-              Payment Methods
-            </Button>
-            <StableCoinsPage />
+            <StableCoinsPage balances={balances} />
           </div>
         </div>
       </div>
@@ -192,111 +185,10 @@ export default function LiquidityPage() {
             </CardHeader>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <div className="flex items-center space-x-4">
-                <div className="p-2 bg-primary/10 rounded-full">
-                  <Payment className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium leading-none">Payment Methods</p>
-                  <p className="text-2xl font-bold tracking-tight mt-2 text-primary">
-                    {paymentMethods.length}
-                  </p>
-                </div>
-              </div>
-            </CardHeader>
-          </Card>
+         
         </div>
-
-        <Card>
-          <CardHeader>
-            <h2 className="text-lg font-semibold tracking-tight">Available Rates</h2>
-            <p className="text-sm text-muted-foreground">
-              Current exchange rates for your payment methods
-            </p>
-          </CardHeader>
-          <CardContent>
-            <div className="mb-4">
-              <Select
-                value={selectedAsset}
-                onValueChange={setSelectedAsset}
-              >
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Select asset" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="USDT">USDT</SelectItem>
-                  <SelectItem value="USDC">USDC</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Provider</TableHead>
-                  <TableHead>Service</TableHead>
-                  <TableHead>Currency</TableHead>
-                  <TableHead className="text-right">Rate</TableHead>
-                  <TableHead className="text-right">Limits</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {providers.map((provider) => (
-                  <TableRow key={provider.provider_service_id}>
-                    <TableCell>{provider.name}</TableCell>
-                    <TableCell>{provider.service_name}</TableCell>
-                    <TableCell>{provider.currency}</TableCell>
-                    <TableCell className="text-right">
-                      1 {selectedAsset} = {provider.rate.toFixed(2)} {provider.currency}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {provider.min_amount} - {provider.max_amount} {selectedAsset}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <h2 className="text-lg font-semibold tracking-tight">Your Payment Methods</h2>
-            <p className="text-sm text-muted-foreground">
-              Available withdrawal methods
-            </p>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Details</TableHead>
-                  <TableHead>Currency</TableHead>
-                  <TableHead>Country</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paymentMethods.map((method, index) => (
-                  <TableRow key={index}>
-                    <TableCell>
-                      {method.type === 'mobile_money' ? 'Mobile Money' : 'Bank Account'}
-                    </TableCell>
-                    <TableCell>
-                      {method.type === 'mobile_money'
-                        ? `${method.network} - ${method.phone_number}`
-                        : `${method.bank_name}`}
-                    </TableCell>
-                    <TableCell>{method.currency}</TableCell>
-                    <TableCell>{method.country_code}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-
+ 
+     
         <Card>
           <CardHeader>
             <h2 className="text-lg font-semibold tracking-tight">Wallets</h2>
@@ -308,21 +200,16 @@ export default function LiquidityPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Network</TableHead>
-                  <TableHead>Currency</TableHead>
+                  <TableHead>Asset</TableHead>
                   <TableHead className="text-right">Balance</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {balances.map((wallet) => (
-                  (wallet.asset_code === 'USDT' || wallet.asset_code === 'USDC' || wallet.asset_code === 'BUSD') && (
+                  (wallet.asset_code == 'USDT' || wallet.asset_code == 'USDC' || wallet.asset_code == 'BUSD') && (
                     <TableRow key={wallet.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span>{wallet.network}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-mono">{wallet.currency}</TableCell>
+                   
+                      <TableCell className="font-mono">{wallet.asset_code}</TableCell>
                       <TableCell className="text-right font-medium">
                         ${wallet.balance}
                       </TableCell>

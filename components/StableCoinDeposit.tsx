@@ -17,14 +17,21 @@ interface StableCoinDepositProps {
   hideResetButton?: boolean;
 }
 
+interface DepositData {
+  id: number;
+  currency: string;
+  network: string;
+  deposit_address: string;
+  client_id: string;
+  tag: string;
+  vault_id: string;
+  created_at: string;
+}
+
 interface DepositResponse {
-  status: number
-  message: string
-  data?: {
-    network?: string
-    deposit_address?: string
-    currency?: string
-  }
+  status: number;
+  message: string;
+  data: DepositData[];
 }
 
 // QR Code component with fallback
@@ -122,12 +129,11 @@ export default function StableCoinDeposit({
   defaultCurrency = "",
   hideResetButton = false
 }: StableCoinDepositProps) {
-  const [isFormView, setIsFormView] = useState(true)
-  const [selectedCurrency, setSelectedCurrency] = useState(defaultCurrency)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [amount, setAmount] = useState("")
-  const [depositResponse, setDepositResponse] = useState<DepositResponse | null>(null)
+  const [allDeposits, setAllDeposits] = useState<DepositData[]>([])
+  const [selectedNetwork, setSelectedNetwork] = useState<string>("all")
+  const [selectedCurrency, setSelectedCurrency] = useState<string>("all")
   const [copied, setCopied] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const copyToClipboard = (text: string, type: string) => {
@@ -137,219 +143,283 @@ export default function StableCoinDeposit({
     setTimeout(() => setCopied(null), 3000)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setError(null);
+  // Fetch existing deposit requests on component mount
+  useEffect(() => {
+    const fetchDepositRequests = async () => {
+      setIsLoading(true)
+      setError(null)
 
-    try {
-      if (!selectedCurrency && showCurrencySelect) {
-        throw new Error("Please select a stable coin");
+      try {
+        const response = await post("/payment/depositRequest", {
+          from: "CRYPTO",
+          to: "MUDA",
+          currency: "USDT",
+          narration: "Deposit of USDT via stable coin",
+          amount: 400
+        });
+
+        if (response.status === 200) {
+          // Handle array response
+          if (Array.isArray(response.data)) {
+            setAllDeposits(response.data);
+          } else if (response.data) {
+            // Handle single object response
+            setAllDeposits([response.data]);
+          } else {
+            throw new Error("No deposit data available");
+          }
+          toast.success("Deposit information loaded successfully");
+        } else {
+          throw new Error(response.message || "Failed to fetch deposit requests");
+        }
+      } catch (error: any) {
+        console.error("Failed to fetch deposit requests:", error);
+        setError(error.message || "Failed to fetch deposit requests");
+        toast.error(error.message || "Failed to fetch deposit requests");
+      } finally {
+        setIsLoading(false);
       }
+    };
 
-      if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
-        throw new Error("Please enter a valid amount");
-      }
+    fetchDepositRequests();
+  }, []);
 
-      const response = await post("/payment/depositRequest", {
-        from: "CRYPTO",
-        to: "MUDA",
-        currency: selectedCurrency || defaultCurrency,
-        narration: `Deposit of ${selectedCurrency || defaultCurrency} ${amount} via stable coin`,
-        amount: Number(amount)
-      });
-
-      if (response.status === 200) {
-        setDepositResponse(response);
-        setIsFormView(false);
-        toast.success("Deposit information retrieved successfully");
-      } else {
-        throw new Error(response.message || "Failed to process deposit request");
-      }
-    } catch (error: any) {
-      console.error("Deposit request failed:", error);
-      setError(error.message || "Failed to process deposit request");
-      toast.error(error.message || "Failed to process deposit request");
-    } finally {
-      setIsSubmitting(false);
-    }
+  // Get unique networks and currencies from the data
+  const getUniqueNetworks = () => {
+    const networks = allDeposits.map(deposit => deposit.network);
+    return [...new Set(networks)];
   };
 
-  const handleReset = () => {
-    setIsFormView(true);
-    setDepositResponse(null);
-    setSelectedCurrency(defaultCurrency);
-    setAmount("");
-    if (onReset) onReset();
+  const getUniqueCurrencies = () => {
+    const currencies = allDeposits.map(deposit => deposit.currency);
+    return [...new Set(currencies)];
   };
 
-  // Deposit form view
-  const renderDepositForm = () => {
+  // Filter deposits based on selected network and currency
+  const getFilteredDeposits = () => {
+    return allDeposits.filter(deposit => {
+      const networkMatch = selectedNetwork === "all" || deposit.network === selectedNetwork;
+      const currencyMatch = selectedCurrency === "all" || deposit.currency === selectedCurrency;
+      return networkMatch && currencyMatch;
+    });
+  };
+
+  const handleRefresh = () => {
+    // Re-fetch deposit data
+    window.location.reload();
+  };
+
+  // Loading state
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="border-b pb-5 mb-6">
           <h3 className="text-lg font-medium text-gray-900">Stable Coin Deposit</h3>
           <p className="mt-2 text-sm text-gray-500">
-            Complete the form below to get deposit address for your stable coin transfer.
+            Loading your deposit information...
           </p>
         </div>
-
-        <div className="bg-[#e6f4ff] border border-[#26a0ff33] rounded-md p-4 mb-6">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <AlertCircle className="h-5 w-5 text-[#26a0ff]" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-gray-700">
-                You will receive a deposit address for your selected stable coin. Please ensure you send the exact amount specified.
-              </p>
-            </div>
-          </div>
+        <div className="flex items-center justify-center p-8">
+          <RefreshCw className="h-6 w-6 animate-spin mr-2" />
+          Loading deposit details...
         </div>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-4">
-            {showCurrencySelect && (
-              <div>
-                <label className="text-sm font-medium text-gray-700 block mb-2">
-                  Select Stable Coin
-                </label>
-                <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select stable coin" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="USDT">USDT - Tether</SelectItem>
-                    <SelectItem value="USDC">USDC - USD Coin</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            <div>
-              <label className="text-sm font-medium text-gray-700 block mb-2">
-                Deposit Amount
-              </label>
-              <Input
-                type="number"
-                placeholder="Enter amount"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                min="1"
-                step="any"
-                required
-                className="w-full"
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Enter the amount you wish to deposit in {selectedCurrency || defaultCurrency}
-              </p>
-            </div>
-          </div>
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-4">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <AlertCircle className="h-5 w-5 text-red-400" />
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-red-700">{error}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="flex justify-end">
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  Get Deposit Address
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </>
-              )}
-            </Button>
-          </div>
-        </form>
       </div>
     );
-  };
+  }
 
-  // Result view for stable coin deposit
-  const renderStableCoinDepositResult = () => {
-    const stableDetails = depositResponse?.data;
-    
-    if (!stableDetails || !stableDetails.deposit_address) {
-      return (
-        <div className="bg-red-50 border border-red-200 rounded-md p-4">
-          <p className="text-sm text-red-700">Stable coin details not available. Please try again.</p>
-        </div>
-      );
-    }
-
+  // Error state
+  if (error) {
     return (
       <div className="space-y-6">
         <div className="border-b pb-5 mb-6">
-          <h3 className="text-lg font-medium text-gray-900">Stable Coin Deposit Details</h3>
+          <h3 className="text-lg font-medium text-gray-900">Stable Coin Deposit</h3>
           <p className="mt-2 text-sm text-gray-500">
-            Use these details to complete your deposit
+            Failed to load deposit information
+          </p>
+        </div>
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <AlertCircle className="h-5 w-5 text-red-400" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-end">
+          <Button onClick={handleRefresh} variant="outline">
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const filteredDeposits = getFilteredDeposits();
+
+  // Main view for stable coin deposits
+  const renderDepositView = () => {
+    return (
+      <div className="space-y-6">
+        <div className="border-b pb-5 mb-6">
+          <h3 className="text-lg font-medium text-gray-900">Stable Coin Deposit</h3>
+          <p className="mt-2 text-sm text-gray-500">
+            Select network and currency to view deposit addresses
           </p>
         </div>
 
-        <div className="bg-[#e6f4ff] border border-[#26a0ff33] rounded-md p-4 mb-6">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <AlertCircle className="h-5 w-5 text-[#26a0ff]" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-gray-700">
-                Please ensure you send {stableDetails.currency || selectedCurrency || defaultCurrency} to the exact address provided. 
-                Using an incorrect address may result in permanent loss of funds.
-                {stableDetails.network && ` Make sure to use the ${stableDetails.network.toUpperCase()} network.`}
-              </p>
-            </div>
+        {/* Filters */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div>
+            <label className="text-sm font-medium text-gray-700 block mb-2">
+              Select Network
+            </label>
+            <Select value={selectedNetwork} onValueChange={setSelectedNetwork}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select network" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Networks</SelectItem>
+                {getUniqueNetworks().map((network) => (
+                  <SelectItem key={network} value={network}>
+                    {network.toUpperCase()}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-gray-700 block mb-2">
+              Select Currency
+            </label>
+            <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select currency" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Currencies</SelectItem>
+                {getUniqueCurrencies().map((currency) => (
+                  <SelectItem key={currency} value={currency}>
+                    {currency}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
-          <div className="flex flex-col items-center">
-            <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
-              <QRCodeWithFallback value={stableDetails.deposit_address} size={200} onCopy={copyToClipboard} />
-            </div>
-           
-          </div>
-          
-          <div className="flex-1 space-y-4">
-            <div>
-              <h4 className="text-sm font-medium text-gray-500 mb-1">
-                {stableDetails.currency || selectedCurrency || defaultCurrency} Deposit Address {stableDetails.network ? `(${stableDetails.network.toUpperCase()})` : ''}
-              </h4>
-              <div className="flex items-center">
-                <div className="bg-gray-100 p-3 rounded-md border border-gray-200 flex-1 break-all text-sm">
-                  {stableDetails.deposit_address}
-                </div>
-                <button 
-                  onClick={() => copyToClipboard(stableDetails.deposit_address || "", "Crypto address")}
-                  className="ml-2 p-2 text-gray-500 hover:text-gray-700 rounded hover:bg-gray-100"
-                >
-                  {copied === "Crypto address" ? <CheckCircle className="h-5 w-5 text-green-500" /> : <Copy className="h-5 w-5" />}
-                </button>
+        {/* Deposit Results */}
+        {filteredDeposits.length === 0 ? (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <AlertCircle className="h-5 w-5 text-yellow-400" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-yellow-700">
+                  No deposits found for the selected filters. Try selecting different network or currency options.
+                </p>
               </div>
             </div>
-            
-           
-
           </div>
-        </div>
+        ) : (
+          <div className="space-y-6">
+            {filteredDeposits.map((deposit) => (
+              <Card key={deposit.id} className="p-6">
+                <div className="border-b pb-4 mb-4">
+                  <div className="flex justify-between items-center">
+                    <h4 className="text-lg font-medium text-gray-900">
+                      {deposit.currency} - {deposit.network.toUpperCase()}
+                    </h4>
+                    <div className="text-sm text-gray-500">
+                      Created: {new Date(deposit.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-[#e6f4ff] border border-[#26a0ff33] rounded-md p-4 mb-6">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <AlertCircle className="h-5 w-5 text-[#26a0ff]" />
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-gray-700">
+                        Please ensure you send {deposit.currency} to the exact address provided. 
+                        Using an incorrect address may result in permanent loss of funds.
+                        Make sure to use the {deposit.network.toUpperCase()} network.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
+                  <div className="flex flex-col items-center">
+                    <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
+                      <QRCodeWithFallback 
+                        value={deposit.deposit_address} 
+                        size={200} 
+                        onCopy={copyToClipboard} 
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="flex-1 space-y-4">
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500 mb-1">
+                        {deposit.currency} Deposit Address ({deposit.network.toUpperCase()})
+                      </h4>
+                      <div className="flex items-center">
+                        <div className="bg-gray-100 p-3 rounded-md border border-gray-200 flex-1 break-all text-sm">
+                          {deposit.deposit_address}
+                        </div>
+                        <button 
+                          onClick={() => copyToClipboard(deposit.deposit_address, `${deposit.currency} address`)}
+                          className="ml-2 p-2 text-gray-500 hover:text-gray-700 rounded hover:bg-gray-100"
+                        >
+                          {copied === `${deposit.currency} address` ? 
+                            <CheckCircle className="h-5 w-5 text-green-500" /> : 
+                            <Copy className="h-5 w-5" />
+                          }
+                        </button>
+                      </div>
+                    </div>
+
+                    {deposit.tag && (
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-500 mb-1">
+                          Memo/Tag
+                        </h4>
+                        <div className="flex items-center">
+                          <div className="bg-gray-100 p-3 rounded-md border border-gray-200 flex-1 break-all text-sm">
+                            {deposit.tag}
+                          </div>
+                          <button 
+                            onClick={() => copyToClipboard(deposit.tag, "Memo/Tag")}
+                            className="ml-2 p-2 text-gray-500 hover:text-gray-700 rounded hover:bg-gray-100"
+                          >
+                            {copied === "Memo/Tag" ? 
+                              <CheckCircle className="h-5 w-5 text-green-500" /> : 
+                              <Copy className="h-5 w-5" />
+                            }
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
 
         {!hideResetButton && (
           <div className="flex justify-end">
-            <Button variant="outline" onClick={handleReset}>
-              Make Another Deposit
+            <Button variant="outline" onClick={handleRefresh}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh
             </Button>
           </div>
         )}
@@ -359,11 +429,7 @@ export default function StableCoinDeposit({
 
   return (
     <div>
-      {isFormView ? (
-        renderDepositForm()
-      ) : (
-        renderStableCoinDepositResult()
-      )}
+      {renderDepositView()}
     </div>
   )
 } 

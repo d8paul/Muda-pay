@@ -7,9 +7,9 @@ const getBaseURL = () => {
     if (hostname === 'payments.muda.tech') {
       return 'https://api.muda.tech/web/'
     }
-    return 'https://api.muda.tech/web/'
+    return 'https://ag-api.bavana.site/'
   }
-  return 'https://api.muda.tech/web/' // Default for server-side rendering
+  return 'https://ag-api.bavana.site/' // Default for server-side rendering
 }
 
 const api = axios.create({
