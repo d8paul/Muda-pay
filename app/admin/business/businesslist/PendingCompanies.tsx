@@ -56,6 +56,7 @@ export default function PendingCompanies({ onBusinessApproved }: PendingCompanie
     const [businessToReject, setBusinessToReject] = useState<string | null>(null);
     const [show2FAModal, setShow2FAModal] = useState(false);
     const [businessToApprove, setBusinessToApprove] = useState<string | null>(null);
+    const [show2FARejectModal, setShow2FARejectModal] = useState(false);
     const { hasPermission } = usePermissions();
     const { loading: userLoading } = useUser();
 
@@ -121,7 +122,7 @@ export default function PendingCompanies({ onBusinessApproved }: PendingCompanie
         }
     };
 
-    const handleRejectCompany = async () => {
+    const handleRejectCompany = async (twoFactorToken: string) => {
         if (!businessToReject) return;
         
         // if (!hasPermission("business.approve")) {
@@ -138,7 +139,8 @@ export default function PendingCompanies({ onBusinessApproved }: PendingCompanie
         try {
             const response = await put(`/admin/businesses/${businessToReject}/add/approve`, {
                 status: "rejected",
-                reason: rejectReason
+                reason: rejectReason,
+                token: twoFactorToken
             });
             if (response.status === 200) {
                 toast.success("Company rejected successfully");
@@ -147,6 +149,7 @@ export default function PendingCompanies({ onBusinessApproved }: PendingCompanie
                 if (onBusinessApproved) {
                     onBusinessApproved();
                 }
+                setShow2FARejectModal(false);
                 setShowRejectDialog(false);
                 setRejectReason("");
                 setBusinessToReject(null);
@@ -163,6 +166,16 @@ export default function PendingCompanies({ onBusinessApproved }: PendingCompanie
     const openRejectDialog = (businessId: string) => {
         setBusinessToReject(businessId);
         setShowRejectDialog(true);
+    };
+
+    const handleRejectDialogConfirm = () => {
+        if (!rejectReason.trim()) {
+            toast.error("Please provide a reason for rejection.");
+            return;
+        }
+        // Close the reject dialog and show 2FA modal
+        setShowRejectDialog(false);
+        setShow2FARejectModal(true);
     };
 
     const filteredPendingBusinesses = pendingBusinesses.filter(
@@ -357,21 +370,36 @@ export default function PendingCompanies({ onBusinessApproved }: PendingCompanie
                         </Button>
                         <Button 
                             variant="destructive" 
-                            onClick={handleRejectCompany}
+                            onClick={handleRejectDialogConfirm}
                             disabled={isRejecting !== null || !rejectReason.trim()}
                         >
-                            {isRejecting ? "Rejecting..." : "Reject Business"}
+                            Continue to 2FA
                         </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
 
-            {/* Two Factor Authentication Modal */}
+            {/* Two Factor Authentication Modal for Approval */}
             <TwoFactorAuthDialog
                 open={show2FAModal}
                 onOpenChange={setShow2FAModal}
                 onSubmit={confirmApproveCompany}
                 isLoading={isApproving !== null}
+            />
+
+            {/* Two Factor Authentication Modal for Rejection */}
+            <TwoFactorAuthDialog
+                open={show2FARejectModal}
+                onOpenChange={(open) => {
+                    setShow2FARejectModal(open);
+                    if (!open) {
+                        // If 2FA modal is closed, also reset the rejection state
+                        setRejectReason("");
+                        setBusinessToReject(null);
+                    }
+                }}
+                onSubmit={handleRejectCompany}
+                isLoading={isRejecting !== null}
             />
         </>
     );

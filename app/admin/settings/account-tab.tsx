@@ -85,6 +85,7 @@ export default function AccountTab() {
           <ResetPasswordButton 
             variant="default"
             className="bg-sky-500 hover:bg-sky-600"
+            account_type="admin"
           />
         </div>
       </Card>

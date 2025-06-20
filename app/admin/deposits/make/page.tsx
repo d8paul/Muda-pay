@@ -162,7 +162,7 @@ export default function MakeDepositPage() {
                       disabled={localLoading}
                   >
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a client" />
+                      <SelectValue placeholder="Choose a client wallet..." />
                     </SelectTrigger>
                     <SelectContent>
                       {clients.map((client) => (
@@ -184,6 +184,7 @@ export default function MakeDepositPage() {
                     id="amount"
                     value={formData.amount}
                     onChange={handleChange}
+                    placeholder="Enter amount in UGX (e.g., 50000)"
                     required
                   />
                 </div>
@@ -198,6 +199,7 @@ export default function MakeDepositPage() {
                     id="narration"
                     value={formData.narration}
                     onChange={handleChange}
+                    placeholder="Brief description of deposit purpose"
                     required
                   />
                 </div>
@@ -212,6 +214,7 @@ export default function MakeDepositPage() {
                     id="depositReference"
                     value={formData.depositReference}
                     onChange={handleChange}
+                    placeholder="Unique reference ID for this deposit"
                     required
                   />
                 </div>

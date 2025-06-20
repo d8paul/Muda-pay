@@ -82,14 +82,14 @@ export default function PaymentMethodsTable({
             >
               <Pencil className="h-4 w-4" />
             </Button>
-            <Button
+            {/* <Button
               variant="destructive"
               size="sm"
               onClick={() => onDelete(bank)}
               disabled={isSubmitting}
             >
               <Trash2 className="h-4 w-4" />
-            </Button>
+            </Button> */}
           </div>
         </TableCell>
       </TableRow>

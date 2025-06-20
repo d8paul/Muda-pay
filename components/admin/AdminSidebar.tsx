@@ -37,6 +37,11 @@ const menuItems = [
     ],
   },
   {
+    name: "Payment Methods",
+    icon: BuildingOfficeIcon,
+    path: "/admin/payment-methods",
+  },
+  {
     name: "Business",
     icon: BuildingOfficeIcon,
     submenu: [
@@ -46,12 +51,12 @@ const menuItems = [
     ],
   },
   {
-    name: "System Users",
+    name: "Admin Users",
     icon: UsersIcon,
     submenu: [
-      { name: "Users List", path: "/admin/users/list" },
+      { name: "Admin List", path: "/admin/users/list" },
       { name: "Add User", path: "/admin/users/add" },
-      { name: "Pending Users", path: "/admin/users/pending" },
+      { name: "Pending Admin", path: "/admin/users/pending" },
       {
         name: "Roles",
         submenu: [
