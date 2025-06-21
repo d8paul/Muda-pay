@@ -117,22 +117,40 @@ export function ChangePasswordDialogAdmin({
       // Success is handled by the 2FA hook onSuccess callback
     } catch (error: any) {
       console.error("Password change failed:", error)
+      console.error("Error response:", error?.response)
+      console.error("Error response data:", error?.response?.data)
       
       // Extract error message from API response
       let errorMessage = "Password change failed. Please try again."
       
+      // Check for different error response structures
       if (error?.response?.data?.message) {
         errorMessage = error.response.data.message
       } else if (error?.response?.data?.error) {
         errorMessage = error.response.data.error
+      } else if (error?.response?.data) {
+        // Handle case where error data is a string
+        errorMessage = typeof error.response.data === 'string' ? error.response.data : errorMessage
       } else if (error?.message) {
         errorMessage = error.message
       } else if (typeof error === 'string') {
         errorMessage = error
       }
       
+      console.log("Final error message:", errorMessage)
+      
+      // Display the error message to the user
       toast.error(errorMessage)
-      throw error // Re-throw to let 2FA hook handle it
+      
+      // For specific errors like "Current password is incorrect", don't throw 
+      // so the dialog stays open for the user to correct the password
+      if (error?.response?.status === 401 || errorMessage.toLowerCase().includes('current password')) {
+        // Don't re-throw for authentication errors - let user try again
+        return
+      }
+      
+      // Re-throw other errors to let 2FA hook handle them
+      throw error
     } finally {
       setLocalLoading(false)
     }
