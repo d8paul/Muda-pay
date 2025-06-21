@@ -11,6 +11,7 @@ import toast from "react-hot-toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import StableCoinDeposit from "@/components/StableCoinDeposit"
 
 // Keep fallback QR code component for cases where the library might not load
 const FallbackQRCode = ({ value, size = 200 }: { value: string, size?: number }) => {
@@ -492,90 +493,12 @@ export default function DepositFloatTab() {
 
   // Result view for stable coin deposit
   const renderStableCoinDepositResult = () => {
-    const stableDetails = depositResponse?.data;
-    
-    if (!stableDetails || !stableDetails.deposit_address) {
-      return (
-        <div className="bg-red-50 border border-red-200 rounded-md p-4">
-          <p className="text-sm text-red-700">Stable coin details not available. Please try again.</p>
-        </div>
-      );
-    }
-
     return (
-      <div className="space-y-6">
-        <div className="border-b pb-5 mb-6">
-          <h3 className="text-lg font-medium text-gray-900">Stable Coin Deposit Details</h3>
-          <p className="mt-2 text-sm text-gray-500">
-            Use these details to complete your deposit
-          </p>
-        </div>
-
-        <div className="bg-[#e6f4ff] border border-[#26a0ff33] rounded-md p-4 mb-6">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <AlertCircle className="h-5 w-5 text-[#26a0ff]" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-gray-700">
-                Please ensure you send {stableDetails.currency || selectedCurrency} to the exact address provided. 
-                Using an incorrect address may result in permanent loss of funds.
-                {stableDetails.network && ` Make sure to use the ${stableDetails.network.toUpperCase()} network.`}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
-          <div className="flex flex-col items-center">
-            <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
-              <QRCodeWithFallback value={stableDetails.deposit_address} size={200} />
-            </div>
-            <div className="mt-3 text-sm text-gray-500">
-              Tap to copy address
-            </div>
-          </div>
-          
-          <div className="flex-1 space-y-4">
-            <div>
-              <h4 className="text-sm font-medium text-gray-500 mb-1">
-                {stableDetails.currency || selectedCurrency} Deposit Address {stableDetails.network ? `(${stableDetails.network.toUpperCase()})` : ''}
-              </h4>
-              <div className="flex items-center">
-                <div className="bg-gray-100 p-3 rounded-md border border-gray-200 flex-1 break-all text-sm">
-                  {stableDetails.deposit_address}
-                </div>
-                <button 
-                  onClick={() => copyToClipboard(stableDetails.deposit_address || "", "Crypto address")}
-                  className="ml-2 p-2 text-gray-500 hover:text-gray-700 rounded hover:bg-gray-100"
-                >
-                  {copied === "Crypto address" ? <CheckCircle className="h-5 w-5 text-green-500" /> : <Copy className="h-5 w-5" />}
-                </button>
-              </div>
-            </div>
-            
-            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <AlertCircle className="h-5 w-5 text-yellow-400" />
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-yellow-700">
-                    The deposit will be manually converted into fiat currency within 24 hours.
-                    After confirmation, the funds will be added to your account.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex justify-end">
-          <Button variant="outline" onClick={handleReset}>
-            Make Another Deposit
-          </Button>
-        </div>
-      </div>
+      <StableCoinDeposit 
+        onReset={handleReset}
+        defaultCurrency={selectedCurrency}
+        showCurrencySelect={false}
+      />
     );
   };
 
