@@ -144,7 +144,7 @@ export default function PaymentMethodForm({
               disabled={isSubmitting}
             >
               {isSubmitting 
-                ? (editingBank ? "Updating..." : "Creating...") 
+                ? (editingBank ? "Processing..." : "Creating...") 
                 : (editingBank ? "Update" : "Create")
               }
             </Button>
