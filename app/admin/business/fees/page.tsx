@@ -29,36 +29,14 @@ import { Switch } from "@/components/ui/switch"
 
 // Import components
 import {
-  ProductFeesTab,
   CustomFeesTab,
   CustomFeeForm,
   PendingFeesTab,
-  type CompanyFee,
   type CustomFee,
   type CustomFeeFormData,
   type PendingFee,
   type Product
 } from "./components"
-
-interface FeeFormData {
-  product_name: string
-  product_code: string
-  transaction_type: "PUSH" | "PULL"
-  currency: "UGX" | "USD" | "EUR"
-  fee_type: "FLAT" | "PERCENTAGE"
-  fee_amount: number
-  status: "active" | "inactive"
-}
-
-const initialFormData: FeeFormData = {
-  product_name: "",
-  product_code: "",
-  transaction_type: "PUSH",
-  currency: "UGX",
-  fee_type: "FLAT",
-  fee_amount: 0,
-  status: "active"
-}
 
 const initialCustomFeeFormData: CustomFeeFormData = {
   fee_name: "",
@@ -75,17 +53,13 @@ export default function BusinessFeesPage() {
   const router = useRouter()
   const clientId = searchParams.get("client_id")
   const [isLoading, setIsLoading] = useState(true)
-  const [fees, setFees] = useState<CompanyFee[]>([])
   const [customFees, setCustomFees] = useState<CustomFee[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [businessName, setBusinessName] = useState("")
-  const [activeTab, setActiveTab] = useState("view-fees")
+  const [activeTab, setActiveTab] = useState("view-custom-fees")
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [feeToDelete, setFeeToDelete] = useState<string | null>(null)
-  const [formData, setFormData] = useState<FeeFormData>(initialFormData)
   const [customFeeFormData, setCustomFeeFormData] = useState<CustomFeeFormData>(initialCustomFeeFormData)
-  const [isEditing, setIsEditing] = useState(false)
-  const [editingFeeId, setEditingFeeId] = useState<string | null>(null)
   const [isEditingCustom, setIsEditingCustom] = useState(false)
   const [editingCustomFeeId, setEditingCustomFeeId] = useState<number | null>(null)
 
@@ -103,16 +77,12 @@ export default function BusinessFeesPage() {
 
         setBusinessName(businessResponse.data.business_name)
         
-        // The API returns all fees, we need to separate product fees from custom fees
+        // The API returns all fees, we need to get custom fees
         const allFees = feesResponse.data || []
-        
-        // Filter product fees (those with product_name, product_code, etc.)
-        const productFees = allFees.filter((fee: any) => fee.product_name && fee.product_code)
         
         // Filter custom fees (those with fee_name, product_id as string, etc.)
         const customFeesData = allFees.filter((fee: any) => fee.fee_name && typeof fee.product_id === 'string')
         
-        setFees(productFees)
         setCustomFees(customFeesData)
         
         // Set available products for dropdown
@@ -138,99 +108,13 @@ export default function BusinessFeesPage() {
       const feesResponse = await get(`/admin/business/${clientId}/fees`)
       const allFees = feesResponse.data || []
       
-      // Filter and update both product and custom fees
-      const productFees = allFees.filter((fee: any) => fee.product_name && fee.product_code)
+      // Filter and update custom fees only
       const customFeesData = allFees.filter((fee: any) => fee.fee_name && typeof fee.product_id === 'string')
       
-      setFees(productFees)
       setCustomFees(customFeesData)
     } catch (error) {
       console.error("Error refreshing fees:", error)
       toast.error("Failed to refresh fees data")
-    }
-  }
-
-  const handleDeleteClick = (productId: number) => {
-    setFeeToDelete(productId.toString())
-    setDeleteDialogOpen(true)
-  }
-
-  const confirmDelete = async () => {
-    if (!feeToDelete || !clientId) return
-
-    setIsLoading(true)
-    try {
-      await del(`/admin/business/${clientId}/fees/${feeToDelete}`)
-      setFees(fees.filter(fee => fee.product_id.toString() !== feeToDelete))
-      toast.success("Fee deleted successfully")
-    } catch (error) {
-      console.error("Error deleting fee:", error)
-      toast.error("Failed to delete fee")
-    } finally {
-      setIsLoading(false)
-      setFeeToDelete(null)
-      setDeleteDialogOpen(false)
-    }
-  }
-
-  const handleEditClick = (fee: CompanyFee) => {
-    setFormData({
-      product_name: fee.product_name,
-      product_code: fee.product_code,
-      transaction_type: fee.transaction_type,
-      currency: fee.currency,
-      fee_type: fee.fee_type,
-      fee_amount: fee.fee_amount,
-      status: fee.status
-    })
-    setEditingFeeId(fee.product_id.toString())
-    setIsEditing(true)
-    setActiveTab("create-fee")
-  }
-
-  const handleFormChange = (field: keyof FeeFormData, value: string | boolean | number) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }))
-  }
-
-  const resetForm = () => {
-    setFormData(initialFormData)
-    setIsEditing(false)
-    setEditingFeeId(null)
-  }
-
-  const handleSubmit = async () => {
-    if (!clientId) return
-
-    setIsLoading(true)
-    try {
-      const payload = {
-        ...formData,
-        client_id: clientId
-      }
-
-      if (isEditing && editingFeeId) {
-        await put(`/admin/business/${clientId}/fees/${editingFeeId}`, payload)
-        toast.success("Fee updated successfully")
-      } else {
-        await post(`/admin/business/${clientId}/fees`, payload)
-        toast.success("Fee created successfully")
-      }
-
-      // Refresh fees list
-      const feesResponse = await get(`/admin/business/${clientId}/fees`)
-      setFees(feesResponse.data || [])
-      
-      // Reset form and switch to view tab
-      resetForm()
-      setActiveTab("view-fees")
-    } catch (error) {
-      console.error("Error saving fee:", error)
-      toast.error(isEditing ? "Failed to update fee" : "Failed to create fee")
-    } finally {
-      setIsLoading(false)
     }
   }
 
@@ -330,21 +214,10 @@ export default function BusinessFeesPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 mt-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="mb-6">
-              <TabsTrigger value="view-fees">Product Fees</TabsTrigger>
               <TabsTrigger value="view-custom-fees">Custom Fees</TabsTrigger>
-              <TabsTrigger value="create-fee">{isEditing ? "Edit Product Fee" : null}</TabsTrigger>
               <TabsTrigger value="create-custom-fee">{isEditingCustom ? "Edit Custom Fee" : "Add Custom Fee"}</TabsTrigger>
               <TabsTrigger value="pending-fees">Pending Fees</TabsTrigger>
             </TabsList>
-
-            <TabsContent value="view-fees">
-              <ProductFeesTab
-                fees={fees}
-                isLoading={isLoading}
-                onEditFee={handleEditClick}
-                onDeleteFee={handleDeleteClick}
-              />
-            </TabsContent>
 
             <TabsContent value="view-custom-fees">
               <CustomFeesTab
@@ -360,131 +233,6 @@ export default function BusinessFeesPage() {
                   setActiveTab("create-custom-fee")
                 }}
               />
-            </TabsContent>
-
-            <TabsContent value="create-fee">
-              <Card>
-                <CardHeader>
-                  <CardTitle>{isEditing ? "Edit Company Fee" : "Create Company Fee"}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} className="space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="product_name">Product Name</Label>
-                        <Input
-                          id="product_name"
-                          value={formData.product_name}
-                          onChange={(e) => handleFormChange("product_name", e.target.value)}
-                          placeholder="Enter product name"
-                          required
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="product_code">Product Code</Label>
-                        <Input
-                          id="product_code"
-                          value={formData.product_code}
-                          onChange={(e) => handleFormChange("product_code", e.target.value)}
-                          placeholder="Enter product code"
-                          required
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="transaction_type">Transaction Type</Label>
-                        <Select
-                          value={formData.transaction_type}
-                          onValueChange={(value) => handleFormChange("transaction_type", value as "PUSH" | "PULL")}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select transaction type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="PUSH">PUSH</SelectItem>
-                            <SelectItem value="PULL">PULL</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="currency">Currency</Label>
-                        <Select
-                          value={formData.currency}
-                          onValueChange={(value) => handleFormChange("currency", value as "UGX" | "USD" | "EUR")}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select currency" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="UGX">UGX</SelectItem>
-                            <SelectItem value="USD">USD</SelectItem>
-                            <SelectItem value="EUR">EUR</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="fee_type">Fee Type</Label>
-                        <Select
-                          value={formData.fee_type}
-                          onValueChange={(value) => handleFormChange("fee_type", value as "FLAT" | "PERCENTAGE")}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select fee type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="FLAT">Flat Amount</SelectItem>
-                            <SelectItem value="PERCENTAGE">Percentage</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="fee_amount">Fee Amount</Label>
-                        <Input
-                          id="fee_amount"
-                          type="number"
-                          value={formData.fee_amount}
-                          onChange={(e) => handleFormChange("fee_amount", parseFloat(e.target.value) || 0)}
-                          placeholder={formData.fee_type === "PERCENTAGE" ? "Enter percentage" : "Enter amount"}
-                          required
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Status</Label>
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            checked={formData.status === "active"}
-                            onCheckedChange={(checked) => handleFormChange("status", checked ? "active" : "inactive")}
-                          />
-                          <span className="text-sm text-gray-500">
-                            {formData.status === "active" ? "Active" : "Inactive"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end space-x-4">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          resetForm()
-                          setActiveTab("view-fees")
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                      <Button type="submit" disabled={isLoading}>
-                        {isEditing ? "Update Fee" : "Create Fee"}
-                      </Button>
-                    </div>
-                  </form>
-                </CardContent>
-              </Card>
             </TabsContent>
 
             <TabsContent value="create-custom-fee">
@@ -524,7 +272,7 @@ export default function BusinessFeesPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={activeTab === "view-custom-fees" ? confirmDeleteCustomFee : confirmDelete}
+              onClick={confirmDeleteCustomFee}
               className="bg-red-500 hover:bg-red-600 text-white"
             >
               Delete
