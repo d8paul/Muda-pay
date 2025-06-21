@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useTwoFactorAuth } from "@/hooks/useTwoFactorAuth"
 import TwoFactorAuthDialog from "@/components/TwoFactorAuthDialog"
 
 interface ChangePasswordDialogAdminProps {
@@ -30,8 +31,7 @@ export function ChangePasswordDialogAdmin({
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmNewPassword, setConfirmNewPassword] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [show2FAModal, setShow2FAModal] = useState(false)
+  const [localLoading, setLocalLoading] = useState(false)
   const [showPassword, setShowPassword] = useState({
     current: false,
     new: false,
@@ -42,11 +42,23 @@ export function ChangePasswordDialogAdmin({
     newPassword?: string
     confirmNewPassword?: string
   }>({})
-  const [pendingPasswordChange, setPendingPasswordChange] = useState<{
-    current_password: string
-    new_password: string
-    confirm_password: string
-  } | null>(null)
+
+  const { 
+    show2FAModal, 
+    setShow2FAModal,
+    isLoading: twoFALoading, 
+    requireTwoFactorAuth,
+    handle2FASubmit 
+  } = useTwoFactorAuth({
+    onSuccess: () => {
+      toast.success("Password changed successfully")
+      onOpenChange(false)
+      resetForm()
+    },
+    redirectOnMissing: false // Don't redirect, just show error
+  })
+
+  const isLoading = localLoading || twoFALoading
 
   const validateForm = () => {
     const newErrors: typeof errors = {}
@@ -76,8 +88,6 @@ export function ChangePasswordDialogAdmin({
     setNewPassword("")
     setConfirmNewPassword("")
     setErrors({})
-    setPendingPasswordChange(null)
-    setShow2FAModal(false)
   }
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -87,34 +97,44 @@ export function ChangePasswordDialogAdmin({
       return
     }
 
-    // Store the password change data and show 2FA modal
-    setPendingPasswordChange({
+    const passwordData = {
       current_password: currentPassword,
       new_password: newPassword,
       confirm_password: confirmNewPassword
-    })
-    setShow2FAModal(true)
+    }
+    
+    await requireTwoFactorAuth(passwordData, changePassword)
   }
 
-  const handlePasswordChangeWith2FA = async (token: string) => {
-    if (!pendingPasswordChange) return
-  
-    setIsLoading(true)
-  
+  const changePassword = async (data: any, token?: string) => {
+    setLocalLoading(true)
+    
     try {
-      await put("/admin/users/profile/change/password", {
-        ...pendingPasswordChange,
-        token
-      })
-  
-      toast.success("Password changed successfully")
-      onOpenChange(false)
-      resetForm()
-    } catch (error) {
+      // Add token to payload if provided
+      const payload = token ? { ...data, token } : data
+      
+      await put("/admin/change-password", payload)
+      // Success is handled by the 2FA hook onSuccess callback
+    } catch (error: any) {
       console.error("Password change failed:", error)
-      toast.error("Password change failed")
+      
+      // Extract error message from API response
+      let errorMessage = "Password change failed. Please try again."
+      
+      if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message
+      } else if (error?.response?.data?.error) {
+        errorMessage = error.response.data.error
+      } else if (error?.message) {
+        errorMessage = error.message
+      } else if (typeof error === 'string') {
+        errorMessage = error
+      }
+      
+      toast.error(errorMessage)
+      throw error // Re-throw to let 2FA hook handle it
     } finally {
-      setIsLoading(false)
+      setLocalLoading(false)
     }
   }
 
@@ -145,6 +165,7 @@ export function ChangePasswordDialogAdmin({
                   type={showPassword.current ? "text" : "password"}
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Enter your current password"
                   className={`${errors.currentPassword ? "border-red-500" : ""} pr-10`}
                   disabled={isLoading}
                   required
@@ -173,6 +194,7 @@ export function ChangePasswordDialogAdmin({
                   type={showPassword.new ? "text" : "password"}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter your new password (min 8 characters)"
                   className={`${errors.newPassword ? "border-red-500" : ""} pr-10`}
                   disabled={isLoading}
                   required
@@ -202,6 +224,7 @@ export function ChangePasswordDialogAdmin({
                   type={showPassword.confirm ? "text" : "password"}
                   value={confirmNewPassword}
                   onChange={(e) => setConfirmNewPassword(e.target.value)}
+                  placeholder="Confirm your new password"
                   className={`${errors.confirmNewPassword ? "border-red-500" : ""} pr-10`}
                   disabled={isLoading}
                   required
@@ -244,13 +267,8 @@ export function ChangePasswordDialogAdmin({
       {/* 2FA Dialog for Password Change */}
       <TwoFactorAuthDialog
         open={show2FAModal}
-        onOpenChange={(open) => {
-          setShow2FAModal(open)
-          if (!open) {
-            setPendingPasswordChange(null)
-          }
-        }}
-        onSubmit={handlePasswordChangeWith2FA}
+        onOpenChange={setShow2FAModal}
+        onSubmit={handle2FASubmit}
         isLoading={isLoading}
       />
     </>

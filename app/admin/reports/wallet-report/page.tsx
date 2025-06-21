@@ -40,9 +40,9 @@ interface WalletBalance {
 const WalletReportPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCurrency, setSelectedCurrency] = useState("all");
+  const [selectedCurrency, setSelectedCurrency] = useState("UGX");
   const [currencies, setCurrencies] = useState<Currency[]>([]);
-  const [walletBalances, setWalletBalances] = useState<Record<string, WalletBalance[]>>({});
+  const [walletBalances, setWalletBalances] = useState<WalletBalance[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [selectedWallet, setSelectedWallet] = useState<{ accountId: string; currency: string } | null>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -52,10 +52,12 @@ const WalletReportPage = () => {
   }, []);
 
   useEffect(() => {
-    if (currencies.length > 0) {
+    if (selectedCurrency && selectedCurrency !== "") {
       fetchWalletBalances();
+    } else {
+      setWalletBalances([]);
     }
-  }, [currencies]);
+  }, [selectedCurrency]);
 
   useEffect(() => {
     if (selectedWallet) {
@@ -80,29 +82,21 @@ const WalletReportPage = () => {
   };
 
   const fetchWalletBalances = async () => {
+    if (!selectedCurrency) return;
+    
     setIsLoading(true);
     try {
-      const balances: Record<string, WalletBalance[]> = {};
-      
-      await Promise.all(
-        currencies.map(async (currency) => {
-          try {
-            const response = await get(`/admin/wallets/${currency.currency.toLowerCase()}`);
-            if (response.status === 200) {
-              balances[currency.currency] = response.data || [];
-            }
-          } catch (error) {
-            console.error(`Error fetching ${currency.currency} balances:`, error);
-            balances[currency.currency] = [];
-          }
-        })
-      );
-      
-      setWalletBalances(balances);
+      const response = await get(`/admin/wallets/${selectedCurrency.toLowerCase()}`);
+      if (response.status === 200) {
+        setWalletBalances(response.data || []);
+      } else {
+        setWalletBalances([]);
+      }
     } catch (error) {
-      console.error("Error fetching wallet balances:", error);
-      setError("Failed to fetch wallet balances");
-      toast.error("Failed to fetch wallet balances");
+      console.error(`Error fetching ${selectedCurrency} balances:`, error);
+      setError(`Failed to fetch ${selectedCurrency} wallet balances`);
+      toast.error(`Failed to fetch ${selectedCurrency} wallet balances`);
+      setWalletBalances([]);
     } finally {
       setIsLoading(false);
     }
@@ -138,35 +132,30 @@ const WalletReportPage = () => {
 
   const handleResetFilters = () => {
     setSearchTerm("");
-    setSelectedCurrency("all");
+    setSelectedCurrency("UGX");
+    setWalletBalances([]);
   };
 
   const filteredData = useMemo(() => {
-    const allWallets: any[] = [];
+    if (!selectedCurrency || walletBalances.length === 0) {
+      return [];
+    }
     
-    Object.entries(walletBalances).forEach(([currency, balances]) => {
-      balances.forEach((balance) => {
-        allWallets.push({
-          id: balance.wallet.accountId,
-          walletName: `${balance.businessName} (${currency})`,
-          balance: parseFloat(balance.wallet.balance),
-          cBalance: parseFloat(balance.wallet.cBalance),
-          currency: currency,
-          fiatCurrency: currency,
-        });
+    return walletBalances
+      .map((balance) => ({
+        id: balance.wallet.accountId,
+        walletName: `${balance.businessName} (${selectedCurrency})`,
+        balance: parseFloat(balance.wallet.balance),
+        cBalance: parseFloat(balance.wallet.cBalance),
+        currency: selectedCurrency,
+        fiatCurrency: selectedCurrency,
+      }))
+      .filter(wallet => {
+        const matchesSearch = !searchTerm || 
+          wallet.walletName.toLowerCase().includes(searchTerm.toLowerCase());
+        
+        return matchesSearch;
       });
-    });
-
-    return allWallets.filter(wallet => {
-      const matchesSearch = !searchTerm || 
-        wallet.walletName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        wallet.currency.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesCurrency = selectedCurrency === "all" || 
-        wallet.currency === selectedCurrency;
-      
-      return matchesSearch && matchesCurrency;
-    });
   }, [walletBalances, searchTerm, selectedCurrency]);
 
   const uniqueCurrencies = useMemo(() => {
@@ -231,7 +220,6 @@ const WalletReportPage = () => {
                       <SelectValue placeholder="Select Currency" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Currencies</SelectItem>
                       {uniqueCurrencies.map((currency) => (
                         <SelectItem key={currency} value={currency}>
                           {currency}
@@ -261,7 +249,13 @@ const WalletReportPage = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredData.length > 0 ? (
+                {!selectedCurrency ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-4">
+                      Please select a currency to view wallet balances
+                    </TableCell>
+                  </TableRow>
+                ) : filteredData.length > 0 ? (
                   filteredData.map((wallet) => (
                     <TableRow 
                       key={wallet.id}
@@ -277,7 +271,7 @@ const WalletReportPage = () => {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center py-4">
-                      No results found
+                      No wallet balances found for {selectedCurrency}
                     </TableCell>
                   </TableRow>
                 )}

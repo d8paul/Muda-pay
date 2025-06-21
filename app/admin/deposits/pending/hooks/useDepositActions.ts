@@ -5,12 +5,26 @@ import { post } from "@/utils/api"
 import toast from "react-hot-toast"
 import { Deposit } from "../types"
 
-export function useDepositActions() {
-  const [isLoading, setIsLoading] = useState(false);
+interface UseDepositActionsReturn {
+  isLoading: boolean;
+  selectedTransId: string | null;
+  actionType: 'approve' | 'reject' | null;
+  show2FAModal: boolean;
+  showRejectModal: boolean;
+  openAction: (trans_id: string, type: 'approve' | 'reject') => void;
+  handleApprove: (token: string, onSuccess: (transId: string) => void) => Promise<void>;
+  handleReject: (onSuccess: (transId: string) => void) => Promise<void>;
+  closeModals: () => void;
+  setShow2FAModal: (show: boolean) => void;
+  setShowRejectModal: (show: boolean) => void;
+}
+
+export function useDepositActions(): UseDepositActionsReturn {
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [selectedTransId, setSelectedTransId] = useState<string | null>(null);
   const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
-  const [show2FAModal, setShow2FAModal] = useState(false);
-  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [show2FAModal, setShow2FAModal] = useState<boolean>(false);
+  const [showRejectModal, setShowRejectModal] = useState<boolean>(false);
 
   const openAction = (trans_id: string, type: 'approve' | 'reject') => {
     setSelectedTransId(trans_id);

@@ -151,6 +151,8 @@ export default function PendingRoles() {
     if (!confirmRole || !confirmAction) return
 
     if (confirmAction === "reject") {
+      setSelectedRole(confirmRole)
+      setAction(confirmAction)
       setShowRejectDialog(true)
     } else {
       setSelectedRole(confirmRole)
@@ -163,31 +165,9 @@ export default function PendingRoles() {
   const handleRejectSubmit = async (data: RejectFormValues) => {
     if (!selectedRole) return
 
-    setIsSubmitting(true)
-    try {
-      const payload = {
-        status: "rejected",
-        reason: data.reason,
-        token: "", // This will be set by 2FA
-        access_rights: selectedRole.data_content.access_rights
-      }
-
-      const response = await put(`/admin/roles/${selectedRole.id}/add/reject`, payload)
-
-      if (response.status === 200) {
-        toast.success(response.message || "Role rejected successfully")
-        fetchPendingRoles()
-        setShowRejectDialog(false)
-        form.reset()
-      } else {
-        throw new Error(response.message || "Failed to reject role")
-      }
-    } catch (error: any) {
-      console.error("Error rejecting role:", error)
-      toast.error(error.message || "Failed to reject role")
-    } finally {
-      setIsSubmitting(false)
-    }
+    setRejectionReason(data.reason)
+    setShowRejectDialog(false)
+    setShow2FA(true)
   }
 
   const handle2FASuccess = React.useCallback(async (token: string) => {
@@ -198,14 +178,13 @@ export default function PendingRoles() {
       const payload = {
         status: action === "approve" ? "approved" : "rejected",
         reason: action === "reject" ? rejectionReason : "",
-        token,
-        access_rights: selectedRole.data_content.access_rights
+        token
       }
 
-      const response = await put(`/admin/roles/${selectedRole.id}/add/${action}`, payload)
+      const response = await put(`/admin/roles/${selectedRole.id}/edit/approve`, payload)
 
       if (response.status === 200) {
-        toast.success(response.message || "Role added successfully")
+        toast.success(response.message || `Role ${action}d successfully`)
         fetchPendingRoles()
       } else {
         throw new Error(response.message || `Failed to ${action} role`)
@@ -219,8 +198,9 @@ export default function PendingRoles() {
       setSelectedRole(null)
       setAction(null)
       setRejectionReason("")
+      form.reset()
     }
-  }, [selectedRole, action, rejectionReason, fetchPendingRoles])
+  }, [selectedRole, action, rejectionReason, fetchPendingRoles, form])
 
   const toggleRow = (roleId: string) => {
     const newExpandedRows = new Set(expandedRows)

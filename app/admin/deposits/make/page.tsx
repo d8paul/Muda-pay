@@ -10,6 +10,7 @@ import ProgressBar from "@/components/ProgressBar"
 import { get, post } from "@/utils/api"
 import { useTwoFactorAuth } from "@/hooks/useTwoFactorAuth"
 import TwoFactorAuthDialog from "@/components/TwoFactorAuthDialog"
+import { useRouter } from "next/navigation"
 
 interface Client {
   client_id: string
@@ -17,6 +18,7 @@ interface Client {
 }
 
 export default function MakeDepositPage() {
+  const router = useRouter()
   const [localLoading, setLocalLoading] = useState(false)
   const [formData, setFormData] = useState({
     walletId: "",
@@ -42,6 +44,8 @@ export default function MakeDepositPage() {
         narration: "",
         depositReference: "",
       })
+      // Redirect to pending deposits page
+      router.push("/admin/deposits/pending")
     },
     redirectOnMissing: true
   })

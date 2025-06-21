@@ -9,18 +9,18 @@ import { useDepositActions } from "./hooks/useDepositActions"
 
 export default function PendingDepositsPage() {
   const { isLoading, pendingDeposits, removeDeposit } = usePendingDeposits();
-  const {
-    isLoading: actionLoading,
-    selectedTransId,
-    show2FAModal,
-    showRejectModal,
-    openAction,
-    handleApprove,
-    handleReject,
-    closeModals,
-    setShow2FAModal,
-    setShowRejectModal
-  } = useDepositActions();
+  const depositActions = useDepositActions();
+  
+  const actionLoading: boolean = depositActions.isLoading;
+  const selectedTransId: string | null = depositActions.selectedTransId;
+  const show2FAModal: boolean = depositActions.show2FAModal;
+  const showRejectModal: boolean = depositActions.showRejectModal;
+  const openAction: (trans_id: string, type: 'approve' | 'reject') => void = depositActions.openAction;
+  const handleApprove: (token: string, onSuccess: (transId: string) => void) => Promise<void> = depositActions.handleApprove;
+  const handleReject: (onSuccess: (transId: string) => void) => Promise<void> = depositActions.handleReject;
+  const closeModals: () => void = depositActions.closeModals;
+  const setShow2FAModal: (show: boolean) => void = depositActions.setShow2FAModal;
+  const setShowRejectModal: (show: boolean) => void = depositActions.setShowRejectModal;
 
   const onDepositAction = (trans_id: string, type: 'approve' | 'reject') => {
     openAction(trans_id, type);
@@ -28,10 +28,6 @@ export default function PendingDepositsPage() {
 
   const onApprovalSubmit = (token: string) => {
     handleApprove(token, removeDeposit);
-  };
-
-  const onRejectConfirm = () => {
-    handleReject(removeDeposit);
   };
 
   return (
@@ -58,9 +54,13 @@ export default function PendingDepositsPage() {
           setShowRejectModal(open);
           if (!open) closeModals();
         }}
-        onConfirm={onRejectConfirm}
-        transactionId={selectedTransId}
-        isLoading={actionLoading}
+        onSuccess={() => {
+          if (selectedTransId) {
+            removeDeposit(selectedTransId);
+          }
+          closeModals();
+        }}
+        depositId={selectedTransId}
       />
 
       <ApprovalFlow

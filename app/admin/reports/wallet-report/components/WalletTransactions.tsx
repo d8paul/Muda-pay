@@ -9,6 +9,12 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import ProgressBar from "@/components/ui/progress-bar";
 import { ArrowLeft, Search, FilterX } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,6 +30,7 @@ interface WalletTransaction {
   trans_id: string;
   reference_id: string;
   stellar_tx_id: string | null;
+  req_amount: string;
   amount: string;
   asset_code: string;
   currency: string;
@@ -32,9 +39,12 @@ interface WalletTransaction {
   memo: string;
   status: string;
   fee: string;
+  provider_fees: number;
+  running_balance: string;
   service_name: string | null;
   SessionId: string | null;
   created_at: string;
+  ext_reference: string | null;
 }
 
 interface WalletTransactionsProps {
@@ -46,9 +56,11 @@ interface WalletTransactionsProps {
 export default function WalletTransactions({ transactions, isLoading, onBack }: WalletTransactionsProps) {
   const [transactionFilters, setTransactionFilters] = useState({
     search: "",
-    status: "all",
+    status: "SUCCESS",
     type: "all"
   });
+  const [selectedTransaction, setSelectedTransaction] = useState<WalletTransaction | null>(null);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter(transaction => {
@@ -65,6 +77,11 @@ export default function WalletTransactions({ transactions, isLoading, onBack }: 
       return matchesSearch && matchesStatus && matchesType;
     });
   }, [transactions, transactionFilters]);
+
+  const handleRowClick = (transaction: WalletTransaction) => {
+    setSelectedTransaction(transaction);
+    setShowDetailsDialog(true);
+  };
 
   return (
     <>
@@ -129,7 +146,7 @@ export default function WalletTransactions({ transactions, isLoading, onBack }: 
                 <div>
                   <Button
                     variant="outline"
-                    onClick={() => setTransactionFilters({ search: "", status: "all", type: "all" })}
+                    onClick={() => setTransactionFilters({ search: "", status: "SUCCESS", type: "all" })}
                     className="w-full"
                   >
                     Reset Filters
@@ -141,29 +158,33 @@ export default function WalletTransactions({ transactions, isLoading, onBack }: 
               <TableHeader>
                 <TableRow>
                   <TableHead>Date</TableHead>
-                  <TableHead>Transaction ID</TableHead>
+                  <TableHead>Reference</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Amount</TableHead>
-                  <TableHead>Reference</TableHead>
+                  <TableHead>Running Balance</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredTransactions.length > 0 ? (
                   filteredTransactions.map((transaction) => (
-                    <TableRow key={transaction.id}>
+                    <TableRow 
+                      key={transaction.id}
+                      className="cursor-pointer hover:bg-gray-50"
+                      onClick={() => handleRowClick(transaction)}
+                    >
                       <TableCell>{new Date(transaction.created_at).toLocaleString()}</TableCell>
-                      <TableCell>{transaction.trans_id}</TableCell>
+                      <TableCell>{transaction.reference_id}</TableCell>
                       <TableCell>{transaction.trans_type}</TableCell>
                       <TableCell>{parseFloat(transaction.amount).toLocaleString()} {transaction.currency}</TableCell>
-                      <TableCell>{transaction.reference_id}</TableCell>
+                      <TableCell>{parseFloat(transaction.running_balance).toLocaleString()} {transaction.currency}</TableCell>
                       <TableCell>
                         <span className={`px-2 py-1 rounded-full text-xs ${
                           transaction.status === 'SUCCESS' ? 'bg-green-100 text-green-800' :
-                          transaction.status === 'FAILED' ? 'bg-red-100 text-red-800' :
+                          transaction.status === 'FAILED' || transaction.status === 'failed' ? 'bg-red-100 text-red-800' :
                           'bg-yellow-100 text-yellow-800'
                         }`}>
-                          {transaction.status}
+                          {transaction.status.toUpperCase()}
                         </span>
                       </TableCell>
                     </TableRow>
@@ -180,6 +201,109 @@ export default function WalletTransactions({ transactions, isLoading, onBack }: 
           </div>
         </div>
       </div>
+
+      {/* Transaction Details Dialog */}
+      <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Transaction Details</DialogTitle>
+          </DialogHeader>
+          {selectedTransaction && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Transaction ID</label>
+                  <p className="text-sm">{selectedTransaction.trans_id}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Reference ID</label>
+                  <p className="text-sm">{selectedTransaction.reference_id}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Client ID</label>
+                  <p className="text-sm">{selectedTransaction.client_id}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Validation ID</label>
+                  <p className="text-sm">{selectedTransaction.validation_id}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Product ID</label>
+                  <p className="text-sm">{selectedTransaction.product_id}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Session ID</label>
+                  <p className="text-sm">{selectedTransaction.SessionId || 'N/A'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Request Amount</label>
+                  <p className="text-sm">{parseFloat(selectedTransaction.req_amount || '0').toLocaleString()} {selectedTransaction.currency}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Amount</label>
+                  <p className="text-sm">{parseFloat(selectedTransaction.amount).toLocaleString()} {selectedTransaction.currency}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Fee</label>
+                  <p className="text-sm">{parseFloat(selectedTransaction.fee).toLocaleString()} {selectedTransaction.currency}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Provider Fees</label>
+                  <p className="text-sm">{selectedTransaction.provider_fees?.toLocaleString() || 'N/A'} {selectedTransaction.currency}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Running Balance</label>
+                  <p className="text-sm">{parseFloat(selectedTransaction.running_balance).toLocaleString()} {selectedTransaction.currency}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Asset Code</label>
+                  <p className="text-sm">{selectedTransaction.asset_code}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Sender Account</label>
+                  <p className="text-sm">{selectedTransaction.sender_account}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Receiver Account</label>
+                  <p className="text-sm">{selectedTransaction.receiver_account}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Stellar TX ID</label>
+                  <p className="text-sm">{selectedTransaction.stellar_tx_id || 'N/A'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">External Reference</label>
+                  <p className="text-sm">{selectedTransaction.ext_reference || 'N/A'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Service Name</label>
+                  <p className="text-sm">{selectedTransaction.service_name || 'N/A'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Status</label>
+                  <p className="text-sm">
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                      selectedTransaction.status === 'SUCCESS' ? 'bg-green-100 text-green-800' :
+                      selectedTransaction.status === 'FAILED' || selectedTransaction.status === 'failed' ? 'bg-red-100 text-red-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {selectedTransaction.status.toUpperCase()}
+                    </span>
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Created At</label>
+                  <p className="text-sm">{new Date(selectedTransaction.created_at).toLocaleString()}</p>
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Memo</label>
+                <p className="text-sm break-all">{selectedTransaction.memo}</p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 } 
