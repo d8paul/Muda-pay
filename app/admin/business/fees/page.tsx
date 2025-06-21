@@ -43,8 +43,6 @@ const initialCustomFeeFormData: CustomFeeFormData = {
   product_id: "",
   fee_type: "percentage",
   percentage_value: 0,
-  minimum_amount: "",
-  maximum_amount: "",
   active_status: true
 }
 
@@ -77,13 +75,20 @@ export default function BusinessFeesPage() {
 
         setBusinessName(businessResponse.data.business_name)
         
-        // The API returns all fees, we need to get custom fees
-        const allFees = feesResponse.data || []
+        // Handle custom fees response from the business fees endpoint
+        console.log("Fees API Response:", feesResponse)
         
-        // Filter custom fees (those with fee_name, product_id as string, etc.)
-        const customFeesData = allFees.filter((fee: any) => fee.fee_name && typeof fee.product_id === 'string')
-        
-        setCustomFees(customFeesData)
+        if (feesResponse.data && Array.isArray(feesResponse.data)) {
+          // If the response contains an array of fees, use them directly
+          setCustomFees(feesResponse.data)
+        } else if (feesResponse.data && typeof feesResponse.data === 'object') {
+          // If the response is wrapped in an object, try to extract the fees array
+          const fees = feesResponse.data.fees || feesResponse.data.custom_fees || []
+          setCustomFees(Array.isArray(fees) ? fees : [])
+        } else {
+          // Fallback to empty array
+          setCustomFees([])
+        }
         
         // Set available products for dropdown
         if (productsResponse.status === 200) {
@@ -106,12 +111,19 @@ export default function BusinessFeesPage() {
 
     try {
       const feesResponse = await get(`/admin/business/${clientId}/fees`)
-      const allFees = feesResponse.data || []
+      console.log("Refresh Fees API Response:", feesResponse)
       
-      // Filter and update custom fees only
-      const customFeesData = allFees.filter((fee: any) => fee.fee_name && typeof fee.product_id === 'string')
-      
-      setCustomFees(customFeesData)
+      if (feesResponse.data && Array.isArray(feesResponse.data)) {
+        // If the response contains an array of fees, use them directly
+        setCustomFees(feesResponse.data)
+      } else if (feesResponse.data && typeof feesResponse.data === 'object') {
+        // If the response is wrapped in an object, try to extract the fees array
+        const fees = feesResponse.data.fees || feesResponse.data.custom_fees || []
+        setCustomFees(Array.isArray(fees) ? fees : [])
+      } else {
+        // Fallback to empty array
+        setCustomFees([])
+      }
     } catch (error) {
       console.error("Error refreshing fees:", error)
       toast.error("Failed to refresh fees data")
@@ -120,8 +132,10 @@ export default function BusinessFeesPage() {
 
   // Custom fee handlers
   const handleDeleteCustomFeeClick = (feeId: number) => {
-    setFeeToDelete(feeId.toString())
-    setDeleteDialogOpen(true)
+    // Note: Current data is business product fees, not deletable custom fees
+    // This function is kept for interface compatibility but doesn't perform any action
+    console.log("Cannot delete business product fee:", feeId)
+    toast.error("Business product fees cannot be deleted")
   }
 
   const confirmDeleteCustomFee = async () => {
@@ -145,19 +159,10 @@ export default function BusinessFeesPage() {
     }
   }
 
-  const handleEditCustomFeeClick = (fee: CustomFee) => {
-    setCustomFeeFormData({
-      fee_name: fee.fee_name,
-      product_id: fee.product_id,
-      fee_type: fee.fee_type,
-      percentage_value: fee.percentage_value,
-      minimum_amount: fee.minimum_amount,
-      maximum_amount: fee.maximum_amount,
-      active_status: fee.active_status
-    })
-    setEditingCustomFeeId(fee.id)
-    setIsEditingCustom(true)
-    setActiveTab("create-custom-fee")
+  const handleEditCustomFeeClick = (fee: any) => {
+    // Note: Current data is business product fees, not editable custom fees
+    // This function is kept for interface compatibility but doesn't perform any action
+    console.log("View fee details:", fee)
   }
 
   const handleCustomFeeFormChange = (field: keyof CustomFeeFormData, value: string | boolean | number) => {
@@ -199,7 +204,7 @@ export default function BusinessFeesPage() {
               <h1 className="text-2xl font-semibold text-gray-900">
                 Fees for {businessName}
               </h1>
-              <p className="text-gray-500 mt-1">Manage product fees and custom business fees</p>
+              <p className="text-gray-500 mt-1">View business product fees and manage custom fees</p>
             </div>
             {/* <Button onClick={() => {
               resetForm()
@@ -214,7 +219,7 @@ export default function BusinessFeesPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 mt-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="mb-6">
-              <TabsTrigger value="view-custom-fees">Custom Fees</TabsTrigger>
+              <TabsTrigger value="view-custom-fees">Business Fees</TabsTrigger>
               <TabsTrigger value="create-custom-fee">{isEditingCustom ? "Edit Custom Fee" : "Add Custom Fee"}</TabsTrigger>
               <TabsTrigger value="pending-fees">Pending Fees</TabsTrigger>
             </TabsList>

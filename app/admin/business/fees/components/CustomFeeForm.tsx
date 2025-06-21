@@ -15,8 +15,6 @@ export interface CustomFeeFormData {
   product_id: string
   fee_type: "percentage" | "flat"
   percentage_value: number
-  minimum_amount: string
-  maximum_amount: string
   active_status: boolean
 }
 
@@ -65,7 +63,11 @@ export default function CustomFeeForm({
       // Auto-fill the fee name based on the product
       const autoFeeName = `${selectedProduct.product_name}_CUSTOM`
       
+      // Set the fee type based on the product's fee type (lock it to the product's type)
+      const productFeeType = selectedProduct.fee_type.toLowerCase() === "flat" ? "flat" : "percentage"
+      
       onFormChange("product_id", productId)
+      onFormChange("fee_type", productFeeType)
       if (!formData.fee_name) {
         onFormChange("fee_name", autoFeeName)
       }
@@ -158,6 +160,7 @@ export default function CustomFeeForm({
               <Select
                 value={formData.fee_type}
                 onValueChange={(value) => onFormChange("fee_type", value as "percentage" | "flat")}
+                disabled={!!formData.product_id}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select fee type" />
@@ -167,6 +170,11 @@ export default function CustomFeeForm({
                   <SelectItem value="flat">Flat Amount</SelectItem>
                 </SelectContent>
               </Select>
+              {formData.product_id && (
+                <p className="text-xs text-gray-500">
+                  Fee type is locked to the selected product's type
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -180,28 +188,6 @@ export default function CustomFeeForm({
                 value={formData.percentage_value}
                 onChange={(e) => onFormChange("percentage_value", parseFloat(e.target.value) || 0)}
                 placeholder={formData.fee_type === "percentage" ? "Enter percentage (e.g., 2.0)" : "Enter amount"}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="minimum_amount">Minimum Amount</Label>
-              <Input
-                id="minimum_amount"
-                value={formData.minimum_amount}
-                onChange={(e) => onFormChange("minimum_amount", e.target.value)}
-                placeholder="Enter minimum amount"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="maximum_amount">Maximum Amount</Label>
-              <Input
-                id="maximum_amount"
-                value={formData.maximum_amount}
-                onChange={(e) => onFormChange("maximum_amount", e.target.value)}
-                placeholder="Enter maximum amount"
                 required
               />
             </div>
