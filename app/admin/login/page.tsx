@@ -9,6 +9,7 @@ import { post } from "@/utils/api"
 import toast from "react-hot-toast"
 import ProgressBar from "@/components/ProgressBar"
 import BavaPayLogo from "@/components/BavaPayLogo"
+import { EyeIcon, EyeOffIcon } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -20,6 +21,7 @@ import LoginTwoFactorAuthDialog from "@/components/LoginTwoFactorAuthDialog"
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [show2FAModal, setShow2FAModal] = useState(false)
   const router = useRouter()
@@ -41,7 +43,7 @@ export default function AdminLoginPage() {
       }
     } catch (error) {
       console.error("Login failed:", error)
-      toast.error("Login failed")
+      // Error toast is handled by the API interceptor
     } finally {
       setIsLoading(false)
     }
@@ -65,7 +67,7 @@ export default function AdminLoginPage() {
       }
     } catch (error) {
       console.error("2FA verification failed:", error)
-      toast.error("Invalid 2FA code")
+      // Error toast is handled by the API interceptor
     } finally {
       setIsLoading(false)
     }
@@ -106,18 +108,26 @@ export default function AdminLoginPage() {
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                   Password
                 </label>
-                <div className="mt-1">
+                <div className="mt-1 relative">
                   <input
                     id="password"
                     name="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
                     required
                     placeholder="Enter your password"
-                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    className="appearance-none block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+                  </button>
                 </div>
               </div>
 

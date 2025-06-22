@@ -8,11 +8,16 @@ import { post } from "@/utils/api"
 import toast from "react-hot-toast"
 import BavaPayLogo from "./BavaPayLogo"
 import ProgressBar from "./ProgressBar"
+import { EyeIcon, EyeOffIcon } from "lucide-react"
 
 export default function ResetPasswordForm() {
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [otp, setOtp] = useState("")
+  const [showPassword, setShowPassword] = useState({
+    password: false,
+    confirmPassword: false
+  })
   const [isLoading, setIsLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const router = useRouter()
@@ -141,18 +146,26 @@ export default function ResetPasswordForm() {
                   <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                     New Password
                   </label>
-                  <div className="mt-1">
+                  <div className="mt-1 relative">
                     <input
                       id="password"
                       name="password"
-                      type="password"
+                      type={showPassword.password ? "text" : "password"}
                       autoComplete="new-password"
                       required
-                      className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      className="appearance-none block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Enter new password"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword({...showPassword, password: !showPassword.password})}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      aria-label={showPassword.password ? "Hide password" : "Show password"}
+                    >
+                      {showPassword.password ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+                    </button>
                   </div>
                   <p className="mt-1 text-xs text-gray-500">
                     Password must be at least 8 characters long
@@ -163,18 +176,26 @@ export default function ResetPasswordForm() {
                   <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
                     Confirm New Password
                   </label>
-                  <div className="mt-1">
+                  <div className="mt-1 relative">
                     <input
                       id="confirmPassword"
                       name="confirmPassword"
-                      type="password"
+                      type={showPassword.confirmPassword ? "text" : "password"}
                       autoComplete="new-password"
                       required
-                      className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      className="appearance-none block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Confirm new password"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword({...showPassword, confirmPassword: !showPassword.confirmPassword})}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      aria-label={showPassword.confirmPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword.confirmPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+                    </button>
                   </div>
                 </div>
 
